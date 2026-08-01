@@ -1,0 +1,19 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cloudflared
+  namespace: flux-system
+spec:
+  interval: 1h
+  timeout: 5m
+  retryInterval: 2m
+  prune: true
+  wait: true
+  targetNamespace: cloudflared
+  dependsOn:
+    # Needs the ClusterSecretStore object to exist, not just the ExternalSecret CRD.
+    - name: external-secrets-config
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./kubernetes/infrastructure/cloudflared/app
