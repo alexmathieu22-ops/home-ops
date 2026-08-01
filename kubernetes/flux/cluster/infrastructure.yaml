@@ -21,6 +21,47 @@ spec:
     name: flux-system
   path: ./kubernetes/infrastructure/cilium
 ---
+# CRDs are installed by the cilium HelmRelease itself, so ippool.yaml/
+# l2announcementpolicy.yaml (kubernetes/infrastructure/cilium-config) get their own
+# Kustomization dependent on this one -- applying them in the same sync races Helm.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cilium-config
+  namespace: flux-system
+spec:
+  interval: 1h
+  timeout: 5m
+  retryInterval: 2m
+  prune: true
+  wait: true
+  dependsOn:
+    - name: cilium
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./kubernetes/infrastructure/cilium-config
+---
+# Wrapper that syncs the upstream Gateway API CRDs (source + inner Kustomization live in
+# kubernetes/infrastructure/gateway-api-crds) into the cluster. The inner "gateway-api-crds"
+# Kustomization it applies is what envoy-gateway's own dependsOn actually waits on below --
+# same reasoning as the cilium/cilium-config split.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: gateway-api-crds-bootstrap
+  namespace: flux-system
+spec:
+  interval: 1h
+  timeout: 5m
+  retryInterval: 2m
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./kubernetes/infrastructure/gateway-api-crds
+---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -106,6 +147,7 @@ spec:
   wait: true
   dependsOn:
     - name: longhorn
+    - name: gateway-api-crds
   sourceRef:
     kind: GitRepository
     name: flux-system
