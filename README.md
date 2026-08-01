@@ -14,7 +14,7 @@ self-hosted Headscale.
 | Public exposure  | [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) (cloudflared) |
 | VPN              | Self-hosted [Headscale](https://headscale.net/) + Tailscale subnet router |
 | Secrets          | [1Password Service Account](https://developer.1password.com/docs/service-accounts/) via [External Secrets Operator](https://external-secrets.io/) (`1password-sdk` provider) — zero SOPS |
-| Storage          | [Longhorn](https://longhorn.io/)                            |
+| Storage          | [Rook-Ceph](https://rook.io/)                                |
 | Ingress          | [Envoy Gateway](https://gateway.envoyproxy.io/) (Gateway API) |
 | Observability    | kube-prometheus-stack + Loki                                |
 | Dependency mgmt  | [Renovate](https://docs.renovatebot.com/)                   |

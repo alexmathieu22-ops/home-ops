@@ -1,0 +1,108 @@
+# HARDWARE CAVEAT (unresolved, flagging rather than silently guessing): HARDWARE_PLAN.md
+# has each of the 3 Beelink EQ12 Pro nodes carrying OS + app-state on a *single* 500GB
+# NVMe. Rook-Ceph's normal/recommended topology is a dedicated raw block device per node
+# for OSDs -- it will only claim genuinely free/unpartitioned disk space, so at worst this
+# comes up with zero usable OSDs (not destructive to the Talos install) rather than
+# fighting the OS for its disk, but it means Ceph needs either a second small NVMe/USB
+# SSD per node, a free unpartitioned slice of the existing NVMe, or accepting
+# directory-based OSDs (discouraged/lower-reliability in modern Rook). Decide this before
+# buying hardware -- HARDWARE_PLAN.md doesn't currently budget for a second disk.
+# Same reason this can't be validated on the local dev cluster: Docker-provisioned Talos
+# nodes have no raw block devices available either, so CephCluster will likely stay
+# unhealthy there -- that's expected, not a bug (see README.md's local-cluster caveats).
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: rook-ceph-cluster
+  namespace: rook-ceph
+spec:
+  interval: 1h
+  timeout: 10m
+  chartRef:
+    kind: OCIRepository
+    name: rook-ceph-cluster
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    cephClusterSpec:
+      mon:
+        count: 3
+      mgr:
+        modules:
+          - name: pg_autoscaler
+            enabled: true
+      dashboard:
+        enabled: true
+        urlPrefix: /
+        ssl: false
+      network:
+        connections:
+          requireMsgr2: true
+      # Scaled down hard from upstream examples (often 8Gi+) -- 3x 16GB nodes running
+      # the full infra+app stack alongside Ceph can't spare that much per OSD. Revisit
+      # once real hardware is up and `ceph osd df` / actual usage is known.
+      resources:
+        mgr:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 512Mi
+        mon:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 512Mi
+        osd:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            memory: 2Gi
+      storage:
+        useAllDevices: true
+        useAllNodes: true
+    # No Prometheus Operator CRDs at this point in the dependency chain (monitoring
+    # depends on storage being ready, not the other way around) -- enable once both are
+    # confirmed stable, if per-OSD metrics are actually needed.
+    monitoring:
+      enabled: false
+    toolbox:
+      enabled: true
+    # Needs the external-snapshotter CRDs (VolumeSnapshotClass), not installed anywhere
+    # in this repo yet.
+    cephBlockPoolsVolumeSnapshotClass:
+      enabled: false
+    cephBlockPools:
+      - name: ceph-blockpool
+        spec:
+          failureDomain: host
+          replicated:
+            size: 3
+        storageClass:
+          enabled: true
+          name: ceph-block
+          isDefault: true
+          allowVolumeExpansion: true
+          reclaimPolicy: Delete
+          volumeBindingMode: Immediate
+          mountOptions:
+            - discard
+          parameters:
+            csi.storage.k8s.io/controller-expand-secret-name: rook-csi-rbd-provisioner
+            csi.storage.k8s.io/controller-expand-secret-namespace: "{{ .Release.Namespace }}"
+            csi.storage.k8s.io/controller-publish-secret-name: rook-csi-rbd-provisioner
+            csi.storage.k8s.io/controller-publish-secret-namespace: "{{ .Release.Namespace }}"
+            csi.storage.k8s.io/node-stage-secret-name: rook-csi-rbd-node
+            csi.storage.k8s.io/node-stage-secret-namespace: "{{ .Release.Namespace }}"
+            csi.storage.k8s.io/provisioner-secret-name: rook-csi-rbd-provisioner
+            csi.storage.k8s.io/provisioner-secret-namespace: "{{ .Release.Namespace }}"
+            imageFeatures: layering
+            imageFormat: "2"
+    cephFileSystems: []
+    cephObjectStores: []

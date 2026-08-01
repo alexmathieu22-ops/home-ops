@@ -1,6 +1,6 @@
 # SingleBinary + filesystem storage — no S3/object-store account exists yet (homelab
 # scale doesn't need it either). Revisit if/when a Backblaze B2 bucket gets set up
-# alongside Longhorn's backup target (kubernetes/infrastructure/longhorn).
+# alongside Ceph's own backup/DR story (kubernetes/infrastructure/rook-ceph).
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -43,7 +43,7 @@ spec:
       replicas: 1
       persistence:
         enabled: true
-        storageClass: longhorn
+        storageClass: ceph-block
         size: 20Gi
     # SingleBinary mode doesn't use these — disable so the chart doesn't also deploy
     # a scalable-mode component set alongside it.
