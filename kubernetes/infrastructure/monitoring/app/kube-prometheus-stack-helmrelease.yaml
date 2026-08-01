@@ -26,7 +26,7 @@ spec:
         storageSpec:
           volumeClaimTemplate:
             spec:
-              storageClassName: longhorn
+              storageClassName: ceph-block
               accessModes: ["ReadWriteOnce"]
               resources:
                 requests:
@@ -36,7 +36,7 @@ spec:
         storage:
           volumeClaimTemplate:
             spec:
-              storageClassName: longhorn
+              storageClassName: ceph-block
               accessModes: ["ReadWriteOnce"]
               resources:
                 requests:
@@ -44,7 +44,7 @@ spec:
     grafana:
       persistence:
         enabled: true
-        storageClassName: longhorn
+        storageClassName: ceph-block
         size: 5Gi
       # Additional Loki datasource — kube-prometheus-stack's own Grafana only wires up
       # Prometheus/Alertmanager by default.

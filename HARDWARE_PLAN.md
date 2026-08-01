@@ -13,14 +13,20 @@ setting, so noise and power draw matter as much as raw specs.
    "$1,200 mistake" — loud (unusable in an apartment bedroom/living room), power-hungry
    (100–300W idle vs. 6–20W for a modern mini PC), and no longer actually cheaper once you
    account for electricity over 2–3 years. Skip this path entirely.
-2. **3 identical nodes > 1 big node + 2 small ones.** Uniform hardware makes Talos/Ceph/Longhorn
+2. **3 identical nodes > 1 big node + 2 small ones.** Uniform hardware makes Talos/Rook-Ceph
    configuration trivial and avoids scheduling headaches. Buy the same model three times.
 3. **Rack is optional, not required.** A 10-inch "mini rack" (DeskPi RackMate / GeeekPi, an
    ecosystem popularized by Jeff Geerling) is genuinely nice for cable management once you have
    a switch + 3 nodes + a NAS, but a $30 shelf works too. Don't let rack shopping delay the
    actual build.
-4. **Decide storage split early**: cluster nodes carry OS + Longhorn app-state on NVMe; bulk
+4. **Decide storage split early**: cluster nodes carry OS + Rook-Ceph app-state on NVMe; bulk
    media (photos/video libraries) goes on a separate NAS, not replicated in-cluster storage.
+   **Caveat added after switching from Longhorn to Rook-Ceph**: Rook-Ceph wants a dedicated
+   *raw, unpartitioned* block device per node for OSDs — it won't share a disk that already
+   has the OS on it. The single-500GB-NVMe-per-node plan below doesn't budget for that. Before
+   buying: either add a second small NVMe/USB SSD per node (few CAD extra), or accept
+   Rook-Ceph coming up with zero usable OSDs until you do. See
+   `kubernetes/infrastructure/rook-ceph/cluster/helmrelease.yaml` for the full note.
 
 ---
 
@@ -37,7 +43,7 @@ Tier 1 below, tightened to a single clear recommendation rather than a range of 
 | **Total**       |                                               | **~$750**        |
 
 That leaves ~$250 of your $1,000 budget unspent — hold onto it rather than pre-buying a NAS or
-rack: use Longhorn on the nodes' own NVMe for app state to start, and revisit storage once you
+rack: use Rook-Ceph on the nodes' own NVMe for app state to start, and revisit storage once you
 know what you're actually missing (almost certainly "more space for Immich," at which point a
 2-bay NAS becomes an easy, well-justified add rather than a guess).
 
@@ -47,7 +53,7 @@ RAM and NVMe as standard — no rack needed, no separate shelf needed, easy to t
 bookshelf or behind a TV. This is the "small and clean" brief taken literally.
 
 **Honest limitation to plan around**: 16GB × 3 nodes is enough for the full infra layer
-(Cilium/cert-manager/ESO/Longhorn/Envoy Gateway) plus a handful of apps, but you'll likely feel
+(Cilium/cert-manager/ESO/Rook-Ceph/Envoy Gateway) plus a handful of apps, but you'll likely feel
 it once Immich's ML features and 3–4 more apps are all running concurrently. That's fine — it's
 a $750 way to prove the entire architecture end-to-end, and RAM/an extra node is a cheap,
 isolated upgrade later that doesn't invalidate anything in the E2E plan.
@@ -62,7 +68,7 @@ NVMe, single 2.5GbE, ~6W idle. ~$220–260 CAD each.
 **Networking:** Existing router + an unmanaged 5-port 2.5GbE switch (~$40 CAD).
 
 **Storage:** No dedicated NAS yet — use a USB3 external drive or a 4th N100 box as
-NFS/Longhorn-only storage node; add a real NAS later.
+NFS/Rook-Ceph-only storage node; add a real NAS later.
 
 **Rack:** Skip it — a $25 wire shelf or even just stacked on a desk with a cable tie or two.
 
@@ -70,7 +76,7 @@ NFS/Longhorn-only storage node; add a real NAS later.
 | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Cheapest real entry into a 3-node HA Talos cluster    | N100 has no hardware transcode headroom for Jellyfin 4K, limited ML performance for Immich face-recognition                                            |
 | 6W idle × 3 ≈ negligible electricity cost             | Single 2.5GbE NIC — fine for K8s traffic, not for a storage-heavy Ceph setup                                                                           |
-| Silent, small, apartment-friendly                     | 16GB RAM is tight once you're running Cilium + cert-manager + ESO + Longhorn + 4–5 apps simultaneously — expect to feel the ceiling within 6–12 months |
+| Silent, small, apartment-friendly                     | 16GB RAM is tight once you're running Cilium + cert-manager + ESO + Rook-Ceph + 4–5 apps simultaneously — expect to feel the ceiling within 6–12 months |
 | Enough to fully validate the GitOps/Talos/VPN pattern | No PCIe/expansion — what you buy is what you get, forever                                                                                              |
 
 **Verdict:** great for proving the architecture cheaply, but you will likely outgrow the RAM
@@ -91,7 +97,7 @@ want VLANs (separate IoT/smart-home traffic from cluster/management traffic, whi
 once Home Assistant + Zigbee/Matter devices are in the picture).
 
 **Storage:** A small dedicated NAS (Synology DS223/DS224+ or a DIY TrueNAS box, 2-bay, ~2×4TB
-mirrored) for photo/media libraries — ~$500–700 CAD. Cluster nodes' NVMe handles Longhorn
+mirrored) for photo/media libraries — ~$500–700 CAD. Cluster nodes' NVMe handles Rook-Ceph
 app-state only.
 
 **Rack:** DeskPi RackMate T1 (8U, 10-inch) or T0 (4U) — ~$150–250 CAD including a couple of
@@ -106,7 +112,7 @@ mandatory but this is the tier where it starts paying for itself in sanity.
 | Quiet, low power (12–20W idle per node)                                                   |                                                                     |
 
 **Verdict — this is where I'd point you.** It matches what you're actually building (a real
-Kubernetes platform with Cilium/Envoy Gateway/ESO/Longhorn/observability all running
+Kubernetes platform with Cilium/Envoy Gateway/ESO/Rook-Ceph/observability all running
 concurrently, plus Immich's ML workload and Jellyfin transcoding), has genuine multi-year
 headroom, and stays apartment-appropriate on noise and power. If choosing between SER8/9 and
 MS-01: pick **MS-01** if you think you'll ever want Ceph or a dedicated 10GbE storage path;
@@ -148,7 +154,7 @@ otherwise you're pre-paying for headroom Tier 2 won't make you miss for a long t
 
 **Start at Tier 2** (3× Beelink SER8/9 or Minisforum MS-01, small managed switch, 2-bay NAS,
 optional DeskPi rack). It's sized correctly for everything in the E2E plan — the full
-Cilium/Envoy Gateway/ESO/Longhorn/observability stack plus a realistic app list — without
+Cilium/Envoy Gateway/ESO/Rook-Ceph/observability stack plus a realistic app list — without
 over-buying, and the incremental cost over Tier 1 buys you real multi-year headroom rather than
 a near-term repurchase. Add the UPS from Tier 3's list regardless of which tier you land on —
 it's cheap insurance against etcd corruption from a bad power blip, and apartments lose power
