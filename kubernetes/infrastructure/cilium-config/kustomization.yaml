@@ -1,0 +1,9 @@
+# Split from kubernetes/infrastructure/cilium: these CRs' CRDs are installed by the
+# Cilium Helm chart itself, so they need their own Flux Kustomization that dependsOn
+# the cilium HelmRelease -- applying them in the same sync races Helm actually
+# installing the CRDs (see kubernetes/flux/cluster/infrastructure.yaml).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ippool.yaml
+  - l2announcementpolicy.yaml
