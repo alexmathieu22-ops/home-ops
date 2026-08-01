@@ -36,3 +36,31 @@ This creates:
 Run this once per cluster lifetime — again only if you rotate the Service Account token.
 Every other secret in every app is provisioned by an `ExternalSecret` resource pulling
 from 1Password; never hand-create a Kubernetes Secret for app credentials.
+
+## Why OpenTofu, not `op inject` + `kubectl apply`
+
+Reference repos in this space (e.g. [onedr0p/home-ops](https://github.com/onedr0p/home-ops),
+[buroa/k8s-gitops](https://github.com/buroa/k8s-gitops)) skip Terraform/OpenTofu entirely
+for this step: a plain `Secret` manifest with `stringData.token: op://vault/item/field`,
+applied via `kustomize build | op inject | kubectl apply -f -`. No state file, no
+provider — `op inject` just substitutes the reference inline. That's a genuinely simpler
+option for a single Secret and was considered here.
+
+This repo keeps OpenTofu because PROJECT_BRIEF.md locked it in deliberately and it was
+already implemented and working by the time the alternative got evaluated — not because
+OpenTofu is uniquely correct for this job. If you're starting fresh or find the state
+file (`terraform/bootstrap/.terraform`, gitignored) annoying to manage, the `op inject`
+approach is a reasonable swap: drop `terraform/bootstrap/`, add a `bootstrap/` directory
+with a kustomize-rendered `Secret` + `op inject`, and call it from
+`docs/runbooks/cluster-bootstrap.md` instead of `tofu apply`.
+
+Similarly, `flux bootstrap github` (this repo) is the imperative one-time CLI path for
+installing Flux itself. Those same reference repos instead install
+[flux-operator](https://github.com/controlplaneio-fluxcd/flux-operator) + a `FluxInstance`
+CR via Helm, making Flux's own install declarative and Renovate-bumpable, and stage
+Cilium/cert-manager/external-secrets via `helmfile` (with CRDs pre-seeded cluster-wide
+*before* Flux reconciles anything — a cleaner fix for the CRD/CR-ordering races this repo
+instead solves with per-component `app/`+`config/` Kustomization splits, see
+`kubernetes/infrastructure/*/ks.yaml`). Same tradeoff: more correct/declarative, more
+tooling (`helmfile`, `just`) and a bigger rework of an already-working bootstrap. Worth
+revisiting if the CRD-race workarounds start feeling like a tax.
