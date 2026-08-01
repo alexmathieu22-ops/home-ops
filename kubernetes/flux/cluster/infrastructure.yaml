@@ -1,9 +1,9 @@
 # Dependency order per PROJECT_BRIEF.md: Cilium -> cert-manager -> external-secrets ->
 # cloudflared -> Longhorn -> Envoy Gateway, then headscale-subnet-router and monitoring
-# (both need Longhorn for PVCs). Note: cert-manager's ClusterIssuer itself won't go
-# Ready until external-secrets exists and populates its Cloudflare token Secret -- that's
-# expected eventual consistency, not a Kustomization failure (see
-# kubernetes/infrastructure/cert-manager/externalsecret.yaml).
+# (both need Longhorn for PVCs). cert-manager's ClusterIssuer/ExternalSecret are split
+# into cert-manager-config (dependsOn both cert-manager and external-secrets) since they
+# need the ExternalSecret CRD that external-secrets installs -- same CRD/CR race as the
+# cilium/cilium-config split below.
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -97,6 +97,25 @@ spec:
     kind: GitRepository
     name: flux-system
   path: ./kubernetes/infrastructure/external-secrets
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cert-manager-config
+  namespace: flux-system
+spec:
+  interval: 1h
+  timeout: 5m
+  retryInterval: 2m
+  prune: true
+  wait: true
+  dependsOn:
+    - name: cert-manager
+    - name: external-secrets
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./kubernetes/infrastructure/cert-manager-config
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
