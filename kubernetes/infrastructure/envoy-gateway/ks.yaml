@@ -1,0 +1,41 @@
+# GatewayClass/Gateway need the Gateway API CRDs (kubernetes/infrastructure/gateway-api-crds,
+# a separate component) as well as the envoy-gateway HelmRelease's own CRDs -- ./config
+# dependsOn both.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: envoy-gateway
+  namespace: flux-system
+spec:
+  interval: 1h
+  timeout: 5m
+  retryInterval: 2m
+  prune: true
+  wait: true
+  targetNamespace: envoy-gateway-system
+  dependsOn:
+    - name: rook-ceph-cluster
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./kubernetes/infrastructure/envoy-gateway/app
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: envoy-gateway-config
+  namespace: flux-system
+spec:
+  interval: 1h
+  timeout: 5m
+  retryInterval: 2m
+  prune: true
+  wait: true
+  targetNamespace: envoy-gateway-system
+  dependsOn:
+    - name: envoy-gateway
+    - name: gateway-api-crds
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./kubernetes/infrastructure/envoy-gateway/config
