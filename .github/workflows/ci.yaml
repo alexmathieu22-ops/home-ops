@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  kubeconform:
+    name: Validate Kubernetes manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-kubectl@v4
+        with:
+          version: v1.36.3
+
+      - name: Install kubeconform
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz \
+            | tar xz kubeconform
+          sudo install kubeconform /usr/local/bin/kubeconform
+
+      - name: Build and validate every kustomization
+        run: |
+          set -euo pipefail
+          status=0
+          while IFS= read -r -d '' ks; do
+            dir=$(dirname "$ks")
+            echo "::group::$dir"
+            if ! kubectl kustomize "$dir" | kubeconform \
+              -strict \
+              -ignore-missing-schemas \
+              -summary \
+              -schema-location default \
+              -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'; then
+              status=1
+            fi
+            echo "::endgroup::"
+          done < <(find kubernetes -name kustomization.yaml -print0)
+          exit $status
+
+  talos-config:
+    name: Validate talhelper config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install talhelper
+        run: |
+          curl -sSL https://github.com/budimanjojo/talhelper/releases/latest/download/talhelper_linux_amd64.tar.gz \
+            | tar xz talhelper
+          sudo install talhelper /usr/local/bin/talhelper
+
+      - name: Validate talconfig.yaml
+        working-directory: talos
+        run: talhelper validate talconfig talconfig.yaml
+
+  terraform:
+    name: Validate OpenTofu
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: "1.12.5"
+
+      - name: fmt check
+        run: tofu -chdir=terraform/bootstrap fmt -check -diff
+
+      - name: init (no backend, no credentials needed for a syntax check)
+        run: tofu -chdir=terraform/bootstrap init -backend=false
+
+      - name: validate
+        run: tofu -chdir=terraform/bootstrap validate

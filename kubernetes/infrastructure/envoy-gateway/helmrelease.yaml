@@ -5,13 +5,9 @@ metadata:
   namespace: envoy-gateway-system
 spec:
   interval: 1h
-  chart:
-    spec:
-      chart: gateway-helm
-      sourceRef:
-        kind: OCIRepository
-        name: envoy-gateway
-      interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: envoy-gateway
   install:
     remediation:
       retries: 3
