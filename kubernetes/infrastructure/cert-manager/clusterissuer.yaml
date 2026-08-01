@@ -1,0 +1,22 @@
+# TODO: replace with the real domain/email once Cloudflare account+domain exist
+# (PROJECT_BRIEF.md "Deferred"). Used for internal/VPN-only TLS only — cloudflared
+# terminates TLS at Cloudflare's edge for public traffic.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-dns01
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: replace-me@example.com
+    privateKeySecretRef:
+      name: letsencrypt-dns01-account-key
+    solvers:
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token
+              key: api-token
+        selector:
+          dnsZones:
+            - replace-me.example.com

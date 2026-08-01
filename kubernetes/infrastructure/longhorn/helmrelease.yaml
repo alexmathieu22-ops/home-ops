@@ -1,0 +1,40 @@
+# PREREQUISITE (not yet done): Longhorn needs open-iscsi on every node. On Talos this
+# means adding the `siderolabs/iscsi-tools` and `siderolabs/util-linux-tools` system
+# extensions to the Image Factory schematic used in talos/talconfig.yaml (per-node
+# `schematic.customization.systemExtensions.officialExtensions`), then regenerating and
+# re-applying machine configs. Not done on the local QEMU dev cluster yet — Longhorn
+# will fail to attach volumes until this lands.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: longhorn
+  namespace: longhorn-system
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: longhorn
+      version: "1.9.x"
+      sourceRef:
+        kind: HelmRepository
+        name: longhorn
+      interval: 1h
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    defaultSettings:
+      # 3 identical control-plane nodes — replicate every volume across all of them.
+      defaultReplicaCount: 3
+      # DEFERRED: Backblaze B2 bucket doesn't exist yet (HARDWARE_PLAN.md /
+      # PROJECT_BRIEF.md) — configure via an ExternalSecret-backed
+      # `backup-target`/`backup-target-credential-secret` once it does. Don't wait on
+      # this to start using Longhorn for app state; just don't lose data before backups
+      # are wired up.
+      createDefaultDiskLabeledNodes: true
+    persistence:
+      defaultClass: true
+      defaultClassReplicaCount: 3
