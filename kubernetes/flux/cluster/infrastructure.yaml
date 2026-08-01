@@ -1,0 +1,149 @@
+# Dependency order per PROJECT_BRIEF.md: Cilium -> cert-manager -> external-secrets ->
+# cloudflared -> Longhorn -> Envoy Gateway, then headscale-subnet-router and monitoring
+# (both need Longhorn for PVCs). Note: cert-manager's ClusterIssuer itself won't go
+# Ready until external-secrets exists and populates its Cloudflare token Secret -- that's
+# expected eventual consistency, not a Kustomization failure (see
+# kubernetes/infrastructure/cert-manager/externalsecret.yaml).
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cilium
+  namespace: flux-system
+spec:
+  interval: 1h
+  timeout: 5m
+  retryInterval: 2m
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./kubernetes/infrastructure/cilium
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cert-manager
+  namespace: flux-system
+spec:
+  interval: 1h
+  timeout: 5m
+  retryInterval: 2m
+  prune: true
+  wait: true
+  dependsOn:
+    - name: cilium
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./kubernetes/infrastructure/cert-manager
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: external-secrets
+  namespace: flux-system
+spec:
+  interval: 1h
+  timeout: 5m
+  retryInterval: 2m
+  prune: true
+  wait: true
+  dependsOn:
+    - name: cert-manager
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./kubernetes/infrastructure/external-secrets
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cloudflared
+  namespace: flux-system
+spec:
+  interval: 1h
+  timeout: 5m
+  retryInterval: 2m
+  prune: true
+  wait: true
+  dependsOn:
+    - name: external-secrets
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./kubernetes/infrastructure/cloudflared
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: longhorn
+  namespace: flux-system
+spec:
+  interval: 1h
+  timeout: 10m
+  retryInterval: 2m
+  prune: true
+  wait: true
+  dependsOn:
+    - name: cloudflared
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./kubernetes/infrastructure/longhorn
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: envoy-gateway
+  namespace: flux-system
+spec:
+  interval: 1h
+  timeout: 5m
+  retryInterval: 2m
+  prune: true
+  wait: true
+  dependsOn:
+    - name: longhorn
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./kubernetes/infrastructure/envoy-gateway
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: headscale-subnet-router
+  namespace: flux-system
+spec:
+  interval: 1h
+  timeout: 5m
+  retryInterval: 2m
+  prune: true
+  wait: true
+  dependsOn:
+    - name: longhorn
+    - name: external-secrets
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./kubernetes/infrastructure/headscale-subnet-router
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: monitoring
+  namespace: flux-system
+spec:
+  interval: 1h
+  timeout: 10m
+  retryInterval: 2m
+  prune: true
+  wait: true
+  dependsOn:
+    - name: longhorn
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./kubernetes/infrastructure/monitoring
