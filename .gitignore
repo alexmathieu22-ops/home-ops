@@ -1,0 +1,30 @@
+# Talos / talhelper generated secrets & configs — never commit real cluster credentials
+talos/clusterconfig/*
+!talos/clusterconfig/.gitkeep
+talos/talsecret.sops.yaml
+kubeconfig
+talosconfig
+
+# OpenTofu
+terraform/**/.terraform/
+terraform/**/*.tfstate
+terraform/**/*.tfstate.*
+terraform/**/*.tfvars
+!terraform/**/*.tfvars.example
+
+# asdf
+.tool-versions.bak
+
+# Local tool caches
+.cachebro/
+
+# OS
+.DS_Store
+
+# Editors
+.idea/
+.vscode/
+
+# env
+.env
+.envrc
