@@ -1,0 +1,74 @@
+# Not the Tailscale Kubernetes Operator — incompatible with self-hosted Headscale, which
+# only implements Tailscale's v1 API (see juanfont/headscale#3081, #3086). This is a plain
+# tailscale client advertising the home LAN CIDR into the tailnet. StatefulSet (not
+# Deployment) so it keeps a stable node identity/state across restarts via its PVC.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: headscale-subnet-router
+  namespace: headscale-subnet-router
+spec:
+  serviceName: headscale-subnet-router
+  replicas: 1
+  selector:
+    matchLabels:
+      app: headscale-subnet-router
+  template:
+    metadata:
+      labels:
+        app: headscale-subnet-router
+    spec:
+      containers:
+        - name: tailscale
+          image: ghcr.io/tailscale/tailscale:v1.94.0
+          env:
+            # TODO: real Headscale server URL once hosting location is decided
+            # (Oracle Free Tier vs. home — pending CGNAT check).
+            - name: TS_LOGIN_SERVER
+              value: https://headscale.replace-me.example.com
+            - name: TS_AUTHKEY
+              valueFrom:
+                secretKeyRef:
+                  name: headscale-subnet-router-authkey
+                  key: authkey
+            # TODO: replace with the real home LAN CIDR once hardware/networking exist.
+            - name: TS_ROUTES
+              value: "192.168.1.0/24"
+            - name: TS_USERSPACE
+              value: "false"
+            - name: TS_STATE_DIR
+              value: /var/lib/tailscale
+            - name: TS_ACCEPT_DNS
+              value: "false"
+            - name: TS_EXTRA_ARGS
+              value: --advertise-tags=tag:subnet-router
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+                - NET_RAW
+          volumeMounts:
+            - name: tun
+              mountPath: /dev/net/tun
+            - name: state
+              mountPath: /var/lib/tailscale
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+      volumes:
+        - name: tun
+          hostPath:
+            path: /dev/net/tun
+            type: CharDevice
+  volumeClaimTemplates:
+    - metadata:
+        name: state
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: longhorn
+        resources:
+          requests:
+            storage: 1Gi
