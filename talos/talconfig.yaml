@@ -1,0 +1,47 @@
+# talhelper config — source of truth for Talos machine configs.
+#
+# Currently describes the local QEMU dev cluster (talosctl cluster create qemu
+# --controlplanes 3 --workers 0). When real hardware (3x Beelink EQ12 Pro) arrives,
+# only the `nodes:` block below needs to change — hostnames/IPs swap to the real
+# LAN, installDisk swaps from the QEMU virtio disk to the NVMe device, everything
+# else (CNI disabled for Cilium, allowSchedulingOnControlPlanes, etc.) stays as-is.
+---
+clusterName: home-ops
+
+talosVersion: v1.13.7
+kubernetesVersion: v1.36.2
+
+# No LB/VIP in front of the control plane yet (not in scope per PROJECT_BRIEF.md) —
+# points at the first control-plane node directly. talhelper still adds all three
+# node IPs to the generated talosconfig's `nodes:` list for talosctl access.
+endpoint: https://10.5.0.2:6443
+
+# All 3 nodes are control-plane (HA etcd quorum, no dedicated workers at this scale).
+allowSchedulingOnControlPlanes: true
+
+# Cilium is installed via Flux HelmRelease (kubernetes/infrastructure/cilium), not
+# Talos's bundled Flannel — same reason kube-proxy is disabled below.
+cniConfig:
+  name: none
+
+controlPlane:
+  patches:
+    # Cilium replaces kube-proxy (kube-proxy-replacement); Talos must not install it.
+    - |-
+      cluster:
+        proxy:
+          disabled: true
+
+nodes:
+  - hostname: home-ops-dev-cp-1
+    ipAddress: 10.5.0.2
+    installDisk: /dev/vda
+    controlPlane: true
+  - hostname: home-ops-dev-cp-2
+    ipAddress: 10.5.0.3
+    installDisk: /dev/vda
+    controlPlane: true
+  - hostname: home-ops-dev-cp-3
+    ipAddress: 10.5.0.4
+    installDisk: /dev/vda
+    controlPlane: true
