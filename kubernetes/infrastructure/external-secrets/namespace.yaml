@@ -1,0 +1,7 @@
+# Also created by terraform/bootstrap (which pushes the 1Password secret-zero token in
+# here before Flux/ESO exist) — declared here too so it's visible/self-documenting in
+# GitOps. Both converge on the same object; no conflict.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: external-secrets

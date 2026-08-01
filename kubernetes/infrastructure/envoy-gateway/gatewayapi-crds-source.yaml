@@ -1,0 +1,14 @@
+# Upstream Gateway API standard-channel CRDs — neither Cilium (CNI/LB-IPAM/L2 only,
+# gatewayAPI.enabled=false) nor the Envoy Gateway chart itself install these; Envoy
+# Gateway's own CRDs come from its Helm chart below, but the Gateway API types
+# (GatewayClass/Gateway/HTTPRoute/...) it implements are a separate upstream project.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: gateway-api
+  namespace: envoy-gateway-system
+spec:
+  interval: 1h
+  url: https://github.com/kubernetes-sigs/gateway-api
+  ref:
+    tag: v1.3.0
