@@ -14,9 +14,9 @@ provider: the Secret object in the cluster is the only source of truth, and re-r
 the apply is always safe. It is never committed to Git and never SOPS-encrypted (the
 committed manifest only ever contains the `op://` reference, not a real value).
 
-## Prerequisites (deferred — not done yet, per PROJECT_BRIEF.md)
+## Prerequisites
 
-- [ ] 1Password account
+- [x] 1Password account
 - [ ] A dedicated vault named `home-ops` for infra secrets (separate from your personal vault)
 - [ ] A 1Password **Service Account**, scoped only to that vault, with an item named
       `eso-service-account` holding the token in a field named `token`
@@ -38,6 +38,17 @@ This creates:
 Run this once per cluster lifetime — again only if you rotate the Service Account token.
 Every other secret in every app is provisioned by an `ExternalSecret` resource pulling
 from 1Password; never hand-create a Kubernetes Secret for app credentials.
+
+`bootstrap/kustomize/components/namespace` is a reusable kustomize
+[Component](https://kubectl.docs.kubernetes.io/guides/config_management/components/)
+that provides the namespace generically (the consuming `kustomization.yaml`'s own
+top-level `namespace:` field renames it) — matches onedr0p/home-ops and
+buroa/k8s-gitops's bootstrap convention. Those repos also split `bootstrap/kustomize/`
+into two top-level groups (`home-operations/`, `personal/`) because they pull secrets
+from two *separate 1Password accounts*, each pushed with a different `OP_ACCOUNT` — not
+just two vaults in one account. This repo uses a single account/vault, so there's just
+the one `external-secrets/` group; revisit if a second, separately-scoped 1Password
+account (e.g. a household/family one) ever gets added.
 
 ## Why not OpenTofu
 
