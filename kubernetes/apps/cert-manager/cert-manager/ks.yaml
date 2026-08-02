@@ -20,6 +20,10 @@ spec:
     name: flux-system
   path: ./kubernetes/apps/cert-manager/cert-manager/app
 ---
+# wait: false is deliberate: this ExternalSecret can't succeed until 1Password exists
+# (PROJECT_BRIEF.md "Deferred") -- Flux would otherwise block this Kustomization forever
+# waiting for its Ready condition. Still applies the object and reports Ready once that
+# succeeds, regardless of the ExternalSecret's own runtime health.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -30,7 +34,7 @@ spec:
   timeout: 5m
   retryInterval: 2m
   prune: true
-  wait: true
+  wait: false
   targetNamespace: cert-manager
   dependsOn:
     - name: cert-manager
