@@ -31,11 +31,13 @@ home-ops/
 ├── talos/                      # talhelper config + generated machine configs (gitignored)
 ├── bootstrap/kustomize/        # secret-zero: op inject + kubectl apply, no Terraform
 ├── kubernetes/
-│   ├── flux/cluster/           # Flux's own bootstrap manifests + the two top-level syncs
-│   ├── infrastructure/         # Cilium, cert-manager, cloudflared, external-secrets,
-│   │                           # Rook-Ceph, Envoy Gateway, headscale-subnet-router, monitoring
-│   │                           # -- each as <name>/{ks.yaml, app/, config/}
-│   └── apps/                   # immich, home-assistant, jellyfin, paperless-ngx, homepage
+│   ├── flux/cluster/           # Flux's own bootstrap manifests + the one top-level sync
+│   └── apps/                   # one tree grouped by K8s namespace (onedr0p/buroa convention):
+│                                # kube-system (cilium), cert-manager, external-secrets,
+│                                # rook-ceph, networking (envoy-gateway, cloudflared,
+│                                # headscale-subnet-router, gateway-api-crds), observability
+│                                # (kube-prometheus-stack, loki, alloy), default (home apps)
+│                                # -- each component as <name>/{ks.yaml, app/, config/}
 ├── .github/workflows/          # Renovate, CI (kubeconform validation)
 └── docs/runbooks/              # the handful of manual, non-GitOps steps
 ```

@@ -26,7 +26,7 @@ setting, so noise and power draw matter as much as raw specs.
    has the OS on it. The single-500GB-NVMe-per-node plan below doesn't budget for that. Before
    buying: either add a second small NVMe/USB SSD per node (few CAD extra), or accept
    Rook-Ceph coming up with zero usable OSDs until you do. See
-   `kubernetes/infrastructure/rook-ceph/cluster/helmrelease.yaml` for the full note.
+   `kubernetes/apps/rook-ceph/rook-ceph/cluster/helmrelease.yaml` for the full note.
 
 ---
 

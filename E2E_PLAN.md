@@ -118,23 +118,28 @@ home-ops/
 │                                # becomes real work (Phase 0/6), where its value is genuine
 ├── kubernetes/
 │   ├── flux/
-│   │   └── cluster/            # Flux's own bootstrap manifests
-│   ├── infrastructure/
-│   │   ├── cilium/
-│   │   ├── cert-manager/
-│   │   ├── cloudflared/
-│   │   ├── external-dns/       # optional, internal split-horizon DNS only
-│   │   ├── external-secrets/
-│   │   ├── longhorn/
-│   │   ├── envoy-gateway/
-│   │   ├── headscale-subnet-router/   # NOT the Tailscale Operator — incompatible with Headscale
-│   │   └── monitoring/         # kube-prometheus-stack, loki
-│   └── apps/
-│       ├── immich/
-│       ├── home-assistant/
-│       ├── jellyfin/
-│       ├── paperless-ngx/
-│       └── homepage/
+│   │   └── cluster/            # Flux's own bootstrap manifests + the one top-level sync
+│   └── apps/                   # one tree, grouped by K8s namespace (onedr0p/buroa convention)
+│       ├── kube-system/
+│       │   └── cilium/
+│       ├── cert-manager/
+│       │   └── cert-manager/
+│       ├── external-secrets/
+│       │   └── external-secrets/
+│       ├── rook-ceph/
+│       │   └── rook-ceph/
+│       ├── networking/
+│       │   ├── envoy-gateway/
+│       │   ├── cloudflared/
+│       │   ├── headscale-subnet-router/   # NOT the Tailscale Operator — incompatible with Headscale
+│       │   └── gateway-api-crds/
+│       ├── observability/
+│       │   ├── kube-prometheus-stack/
+│       │   ├── loki/
+│       │   └── alloy/
+│       └── default/             # immich, home-assistant, jellyfin, paperless-ngx, homepage
+│                                 # (not yet scaffolded -- empty until storage/secrets/ingress
+│                                 # infra is live)
 ├── .github/workflows/          # Renovate, CI validation (kubeconform, flux diff)
 └── docs/
     └── runbooks/                # the handful of non-GitOps bootstrap steps, documented
@@ -211,16 +216,20 @@ flux bootstrap github \
 ```
 
 From this point, **every change to the cluster is a `git push`.** Flux watches
-`kubernetes/infrastructure` and `kubernetes/apps`; each subfolder has a `kustomization.yaml`
-
-- a Flux `Kustomization` (`ks.yaml`) that reconciles a `HelmRelease` or raw manifests.
+`kubernetes/apps`, one tree grouped by the K8s namespace things deploy into (`kube-system`,
+`cert-manager`, `external-secrets`, `rook-ceph`, `networking`, `observability`, `default`)
+rather than a separate `infrastructure`/`apps` split — matches onedr0p/home-ops and
+buroa/k8s-gitops's convention. Each component has a colocated `ks.yaml` (the Flux
+`Kustomization`(s), with `dependsOn` declared locally) alongside `app/` (and `config/`,
+where a component's own chart installs CRDs its other resources need) subfolders.
 
 ---
 
 ## Phase 5 — Core infrastructure (in dependency order)
 
-Add each as a `HelmRelease` under `kubernetes/infrastructure/<name>/`, commit, let Flux
-reconcile. Rough dependency order matters (Flux Kustomizations support `dependsOn`):
+Add each as a `HelmRelease` under `kubernetes/apps/<namespace>/<name>/app/`, commit, let
+Flux reconcile. Rough dependency order matters (Flux Kustomizations support `dependsOn`,
+declared in each component's own `ks.yaml`):
 
 1. **Cilium** — CNI + kube-proxy replacement + Gateway API CRDs, with LB-IPAM and L2
    announcements enabled (`l2announcements.enabled=true`, `externalIPs.enabled=true`) —

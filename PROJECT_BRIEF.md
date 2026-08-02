@@ -66,18 +66,19 @@ home-ops/
 ├── bootstrap/
 │   └── kustomize/                # secret-zero push (op inject + kubectl apply), see Phase 3 below
 ├── kubernetes/
-│   ├── flux/cluster/
-│   ├── infrastructure/           # each as <name>/{ks.yaml, app/, config/}
-│   │   ├── cilium/
-│   │   ├── cert-manager/
-│   │   ├── cloudflared/
-│   │   ├── external-secrets/
-│   │   ├── rook-ceph/
-│   │   ├── envoy-gateway/
-│   │   ├── headscale-subnet-router/
-│   │   └── monitoring/
-│   └── apps/                    # empty scaffolding for now: immich/, home-assistant/,
-│                                 # jellyfin/, paperless-ngx/, homepage/
+│   ├── flux/cluster/              # Flux's own bootstrap manifests + the one top-level sync
+│   └── apps/                      # one tree grouped by K8s namespace, matching
+│       │                          # onedr0p/home-ops and buroa/k8s-gitops (amended from the
+│       │                          # original infrastructure/-vs-apps/ split)
+│       ├── kube-system/           # cilium
+│       ├── cert-manager/
+│       ├── external-secrets/
+│       ├── rook-ceph/
+│       ├── networking/            # envoy-gateway, cloudflared, headscale-subnet-router,
+│       │                          # gateway-api-crds
+│       ├── observability/         # kube-prometheus-stack, loki, alloy
+│       └── default/               # empty scaffolding for now: immich, home-assistant,
+│                                   # jellyfin, paperless-ngx, homepage
 ├── .github/workflows/           # Renovate config, CI validation (kubeconform)
 └── docs/runbooks/
     ├── cluster-bootstrap.md     # talosctl bootstrap step (the one manual step)

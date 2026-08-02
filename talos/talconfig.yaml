@@ -19,7 +19,7 @@ endpoint: https://10.5.0.2:6443
 # All 3 nodes are control-plane (HA etcd quorum, no dedicated workers at this scale).
 allowSchedulingOnControlPlanes: true
 
-# Cilium is installed via Flux HelmRelease (kubernetes/infrastructure/cilium), not
+# Cilium is installed via Flux HelmRelease (kubernetes/apps/kube-system/cilium), not
 # Talos's bundled Flannel — same reason kube-proxy is disabled below.
 cniConfig:
   name: none
