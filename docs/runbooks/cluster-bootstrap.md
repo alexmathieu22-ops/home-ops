@@ -12,6 +12,30 @@ talosctl cluster create docker --name home-ops-dev --workers 0
 
 Single control-plane, no `sudo` needed. It generates machine configs, applies them, and
 bootstraps etcd + Kubernetes automatically, merging the kubeconfig into `~/.kube/config`.
+The node comes up `NotReady` and `coredns` stays `Pending` until Cilium exists — expected,
+see the next step.
+
+Remove the default control-plane taint so a single-node cluster can actually schedule
+workloads (real hardware has dedicated capacity across 3 nodes; the throwaway local
+cluster doesn't):
+
+```bash
+kubectl taint nodes --all node-role.kubernetes.io/control-plane:NoSchedule-
+```
+
+### Install Cilium (before Flux)
+
+```bash
+helmfile -f bootstrap/helmfile/helmfile.yaml sync
+```
+
+Talos's CNI is disabled (`talos/talconfig.yaml`: `cniConfig.name: none`), so nothing —
+including Flux's own controller pods — can get pod networking without Cilium first. This
+installs it directly via Helm, reading chart/values straight from the committed
+`kubernetes/apps/kube-system/cilium/app/helmrelease.yaml` (never duplicated — see
+`bootstrap/helmfile/helmfile.yaml`'s comment). Flux takes over reconciling this exact
+release once it exists; `helm upgrade` against an already-installed release converges
+safely. Run this once per cluster lifetime, same as `talosctl bootstrap`.
 
 Confirm:
 
@@ -67,9 +91,17 @@ faithful topology, and this repo's `talos/talconfig.yaml` already describes the 
    ```bash
    talosctl bootstrap -n <first-node-ip>
    ```
-7. Pull kubeconfig, confirm nodes are `Ready`:
+7. Pull kubeconfig:
    ```bash
    talosctl kubeconfig -n <first-node-ip>
+   ```
+8. Install Cilium before anything else (same reasoning as the local dev cluster above —
+   nothing gets pod networking without it, including Flux's own controllers):
+   ```bash
+   helmfile -f bootstrap/helmfile/helmfile.yaml sync
+   ```
+9. Confirm nodes are `Ready`:
+   ```bash
    kubectl get nodes
    ```
 

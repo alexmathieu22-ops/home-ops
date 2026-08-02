@@ -1,0 +1,24 @@
+# Pre-Flux bootstrap: installs Cilium directly via Helm before Flux (or anything else)
+# exists. Talos's CNI is disabled (talos/talconfig.yaml: cniConfig.name=none), so nothing
+# -- including Flux's own controller pods -- can get pod networking without it first; a
+# chicken-and-egg problem that only shows up once you actually try to bootstrap a cluster
+# with Cilium managed by Flux. Same fix onedr0p/home-ops and buroa/k8s-gitops use: install
+# Cilium out-of-band via helmfile, then let Flux take over reconciling the exact same
+# release name/namespace once it exists (kubernetes/apps/kube-system/cilium) -- `helm
+# upgrade` against an existing release converges safely, so this is a one-time bootstrap
+# step, never re-run except after a full cluster rebuild (docs/runbooks/cluster-bootstrap.md).
+#
+# Values come directly from the committed HelmRelease manifest (templates/values.yaml.gotmpl
+# reads kubernetes/apps/<namespace>/<release>/app/helmrelease.yaml's .spec.values) --
+# never duplicated here, same principle as the reference repos (adapted for a classic Helm
+# repo chart source instead of their OCIRepository-based one).
+repositories:
+  - name: cilium
+    url: https://helm.cilium.io/
+
+releases:
+  - name: cilium
+    namespace: kube-system
+    chart: cilium/cilium
+    values:
+      - templates/values.yaml.gotmpl
