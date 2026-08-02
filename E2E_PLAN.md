@@ -12,7 +12,7 @@ Talos Kubernetes cluster (3 nodes, bare metal)
 ├── cert-manager        (Let's Encrypt certs via DNS-01, for internal/VPN-only TLS)
 ├── cloudflared          (public exposure — no port-forward, no public IP needed)
 ├── external-secrets    (1Password Service Account provider)
-├── Longhorn            (in-cluster PVCs) + NAS (bulk media, NFS)
+├── Rook-Ceph            (in-cluster PVCs) + NAS (bulk media, NFS)
 ├── Envoy Gateway        (Gateway API implementation, internal/VPN-only ingress)
 ├── Headscale subnet router (advertises home LAN CIDR into the tailnet)
 ├── kube-prometheus-stack + Loki (observability)
@@ -26,8 +26,10 @@ configured directly in the tunnel, not via DNS records pointing at a LoadBalance
 `*.internal.yourdomain.com` to auto-resolve inside the tailnet.
 
 Secrets model: **zero SOPS**. "Secret zero" (1Password Service Account token) is pushed
-into the cluster once via Terraform/OpenTofu from your authenticated local `op` session.
-Every other secret in every app flows through ExternalSecret → 1Password.
+into the cluster once via `op inject | kubectl apply` from your authenticated local `op`
+session — see `docs/runbooks/secret-zero.md` for why this replaced the original
+Terraform/OpenTofu plan. Every other secret in every app flows through
+ExternalSecret → 1Password.
 
 ---
 
@@ -104,13 +106,16 @@ buroa/k8s-gitops):
 
 ```
 home-ops/
-├── .tool-versions              # asdf: talosctl, talhelper, flux2, opentofu, kubectl, helm
+├── .tool-versions              # asdf: talosctl, talhelper, flux2, kubectl, helm
 ├── talos/
 │   ├── talconfig.yaml          # talhelper config (node IPs, disks, network)
 │   └── clusterconfig/          # generated machine configs (gitignored or committed encrypted)
-├── terraform/
-│   └── bootstrap/              # OpenTofu: pushes 1Password secret-zero into cluster,
-│                                # optionally manages Headscale VPS + Cloudflare DNS zone
+├── bootstrap/
+│   └── kustomize/               # op inject + kubectl apply: pushes 1Password secret-zero
+│                                # into the cluster (see Phase 3) -- no Terraform/OpenTofu
+│                                # state for this; revisit introducing it if/when actually
+│                                # provisioning the Headscale VPS or a Cloudflare DNS zone
+│                                # becomes real work (Phase 0/6), where its value is genuine
 ├── kubernetes/
 │   ├── flux/
 │   │   └── cluster/            # Flux's own bootstrap manifests
@@ -168,35 +173,25 @@ runbook for the whole cluster lifecycle (re-run only on full rebuild/disaster re
 
 ---
 
-## Phase 3 — Secret zero (Terraform, no SOPS)
+## Phase 3 — Secret zero (`op inject`, no Terraform, no SOPS)
 
-`terraform/bootstrap/main.tf` — reads the 1Password Service Account token from your local
-`op` session (env var `OP_SERVICE_ACCOUNT_TOKEN`, never committed) and creates the one
-Kubernetes Secret that External Secrets needs to bootstrap itself:
+**Amended from the original Terraform-based plan** — evaluated on the merits and switched
+to a simpler, stateless approach; see `docs/runbooks/secret-zero.md` for the full
+reasoning. `bootstrap/kustomize/external-secrets/secret.yaml` is a plain `Secret`
+manifest whose value is a 1Password reference, never a real value at rest in Git:
 
-```hcl
-provider "kubernetes" {
-  config_path = "~/.kube/config"
-}
-
-resource "kubernetes_namespace" "external_secrets" {
-  metadata { name = "external-secrets" }
-}
-
-resource "kubernetes_secret" "onepassword_token" {
-  metadata {
-    name      = "onepassword-service-account-token"
-    namespace = kubernetes_namespace.external_secrets.metadata[0].name
-  }
-  data = {
-    token = var.onepassword_service_account_token
-  }
-}
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: onepassword-service-account-token
+  namespace: external-secrets
+stringData:
+  token: op://infra/eso-service-account/token
 ```
 
 ```bash
-export TF_VAR_onepassword_service_account_token=$(op read "op://infra/eso-service-account/token")
-tofu -chdir=terraform/bootstrap apply
+kubectl kustomize bootstrap/kustomize/external-secrets | op inject | kubectl apply --server-side -f -
 ```
 
 Run this once per cluster lifetime (and again only if you rotate the token). Everything
@@ -240,7 +235,7 @@ reconcile. Rough dependency order matters (Flux Kustomizations support `dependsO
 4. **cloudflared** — Deployment (or DaemonSet) in-cluster, routes by hostname straight to
    `ClusterIP` Services — no LoadBalancer IP, no port-forward, no public IP needed at all.
    Public hostnames are configured in the tunnel, not via DNS records pointing at your IP.
-5. **Longhorn** — default StorageClass for app PVCs; configure S3 (Backblaze B2) backup
+5. **Rook-Ceph** — default StorageClass for app PVCs; configure S3 (Backblaze B2) backup
    target early, not after you have data.
 6. **Envoy Gateway** — the Gateway API implementation for internal/VPN-only traffic; one
    `Gateway` resource, reachable via the Cilium LB-IPAM IP over the tailnet.
@@ -299,7 +294,7 @@ Immich → Home Assistant → Paperless-ngx → Jellyfin → Homepage/Glance das
 - **Renovate** — bot PRs for every Helm chart/image bump across `kubernetes/`. Merge = deploy.
 - **CI validation** — `kubeconform`/`flux diff` on every PR before merge, so bad YAML never
   reaches `main`.
-- **Backups** — Longhorn → Backblaze B2 on a schedule; separately, back up your Git repo itself
+- **Backups** — Rook-Ceph → Backblaze B2 on a schedule; separately, back up your Git repo itself
   (it _is_ your infrastructure) and your 1Password vault export.
 - **Disaster recovery test** — once things are stable, actually wipe a node and rebuild it from
   Phase 2 onward to prove the "as code" claim is real, not aspirational.
@@ -313,7 +308,7 @@ Immich → Home Assistant → Paperless-ngx → Jellyfin → Homepage/Glance das
 | 0     | Accounts, domain, VPS  | Yes (one-time, outside Git)                           |
 | 1     | Repo skeleton          | No                                                    |
 | 2     | Talos cluster Ready    | Yes — `talosctl bootstrap` only                       |
-| 3     | Secret zero in cluster | Yes — one `tofu apply` from local `op` session        |
+| 3     | Secret zero in cluster | Yes — one `op inject \| kubectl apply` from local `op` session |
 | 4     | Flux reconciling       | Yes — one `flux bootstrap` command                    |
 | 5     | Core infra live        | No — Git only                                         |
 | 6     | VPN live               | Partial — Headscale server itself is standalone infra |

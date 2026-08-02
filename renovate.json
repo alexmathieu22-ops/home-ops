@@ -12,9 +12,6 @@
   "helm-values": {
     "fileMatch": ["kubernetes/.+\\.ya?ml$"]
   },
-  "terraform": {
-    "fileMatch": ["terraform/.+\\.tf$"]
-  },
   "asdf": {
     "enabled": true,
     "fileMatch": ["^\\.tool-versions$"]
