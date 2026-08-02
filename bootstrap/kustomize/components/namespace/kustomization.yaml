@@ -1,0 +1,10 @@
+# A reusable kustomize Component (not a base) -- the consuming kustomization.yaml's own
+# top-level `namespace:` field overrides this placeholder Namespace's name too (kustomize
+# special-cases Namespace resources when applying the namespace transformer), so any
+# secret-zero item just sets `namespace: <ns>` and pulls this in rather than hand-writing
+# its own namespace.yaml. Matches onedr0p/home-ops and buroa/k8s-gitops's bootstrap
+# convention.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - namespace.yaml
