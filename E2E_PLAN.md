@@ -192,7 +192,7 @@ metadata:
   name: onepassword-service-account-token
   namespace: external-secrets
 stringData:
-  token: op://infra/eso-service-account/token
+  token: op://home-ops/eso-service-account/token
 ```
 
 ```bash
