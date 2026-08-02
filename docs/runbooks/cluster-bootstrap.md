@@ -7,13 +7,18 @@ disaster-recovery rebuild).
 ## Local dev cluster (current target — hardware not yet purchased)
 
 ```bash
-talosctl cluster create docker --name home-ops-dev --workers 0
+talosctl cluster create docker --name home-ops-dev --workers 0 --memory-controlplanes 6GB \
+  --config-patch '{"cluster":{"network":{"cni":{"name":"none"}},"proxy":{"disabled":true}}}'
 ```
 
-Single control-plane, no `sudo` needed. It generates machine configs, applies them, and
-bootstraps etcd + Kubernetes automatically, merging the kubeconfig into `~/.kube/config`.
-The node comes up `NotReady` and `coredns` stays `Pending` until Cilium exists — expected,
-see the next step.
+Single control-plane, no `sudo` needed. `--memory-controlplanes 6GB` matters: the default
+2GB is too tight once Flux and a few HelmReleases are running and causes controller crash
+loops. The `--config-patch` disables Talos's default Flannel/kube-proxy the same way
+`talos/talconfig.yaml` does for real hardware — without it Cilium and Flannel fight over
+the same pod network and everything (including Flux's own controllers) gets flaky
+"no route to host" errors. This merges the kubeconfig into `~/.kube/config`. The node
+comes up `NotReady` and `coredns` stays `Pending` until Cilium exists — expected, see the
+next step.
 
 Remove the default control-plane taint so a single-node cluster can actually schedule
 workloads (real hardware has dedicated capacity across 3 nodes; the throwaway local
@@ -22,6 +27,10 @@ cluster doesn't):
 ```bash
 kubectl taint nodes --all node-role.kubernetes.io/control-plane:NoSchedule-
 ```
+
+This has been observed to reappear once, shortly after, when kubelet does its first
+config resync — if `flux-system` pods (or anything else) go `Pending` with "untolerated
+taint" shortly after this step, just re-run the same `kubectl taint` command once more.
 
 ### Install Cilium (before Flux)
 
@@ -47,6 +56,19 @@ Tear down when done:
 
 ```bash
 talosctl cluster destroy --name home-ops-dev
+```
+
+Destroying and recreating repeatedly (e.g. while iterating on this repo) accumulates
+stale `talosctl`/`kubectl` contexts — `talosctl cluster create` renames the previous
+`home-ops-dev` context out of the way instead of overwriting it if one already exists,
+and `kubectl`'s current-context pointer can end up referencing a user/cluster entry that
+no longer resolves cleanly. If `kubectl`/`talosctl` start failing with auth or "cannot
+locate user" errors that don't match the cluster's actual state, this is almost always
+why — clean up before recreating:
+
+```bash
+talosctl config contexts   # remove any home-ops-dev* entries via `talosctl config remove`
+kubectl config get-contexts  # delete stale home-ops-dev* contexts/clusters/users via `kubectl config delete-*`
 ```
 
 ### Why Docker, not QEMU
