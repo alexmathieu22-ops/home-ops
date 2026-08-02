@@ -79,7 +79,13 @@ and end-to-end cloudflared tunnel routing.
    it — Talos's CNI is disabled), then `flux bootstrap github`
 2. [`docs/runbooks/secret-zero.md`](docs/runbooks/secret-zero.md) — `op inject | kubectl apply`
    from an authenticated local `op` session
+3. [`docs/runbooks/cloudflare-setup.md`](docs/runbooks/cloudflare-setup.md) — API token +
+   Tunnel token into 1Password (not required for Headscale/VPN, only for public exposure
+   and the internal Gateway's TLS cert)
 
 ## Status
 
-Bootstrapping. See task list / commit history for current phase.
+Bootstrapping. Local dev cluster live with Flux reconciling; 1Password and Cloudflare are
+both set up and verified end-to-end (`cert-manager-config`, `cloudflared` both `Ready`).
+Remaining: Headscale server hosting (pending a CGNAT check), real hardware, and the apps
+themselves. See task list / commit history for current phase.
