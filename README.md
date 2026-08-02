@@ -29,11 +29,12 @@ See [PROJECT_BRIEF.md](../PROJECT_BRIEF.md), [E2E_PLAN.md](../E2E_PLAN.md), and
 home-ops/
 ├── .tool-versions              # asdf-managed CLI versions
 ├── talos/                      # talhelper config + generated machine configs (gitignored)
-├── terraform/bootstrap/        # OpenTofu: pushes 1Password secret-zero into the cluster
+├── bootstrap/kustomize/        # secret-zero: op inject + kubectl apply, no Terraform
 ├── kubernetes/
-│   ├── flux/cluster/           # Flux's own bootstrap manifests
+│   ├── flux/cluster/           # Flux's own bootstrap manifests + the two top-level syncs
 │   ├── infrastructure/         # Cilium, cert-manager, cloudflared, external-secrets,
-│   │                           # Longhorn, Envoy Gateway, headscale-subnet-router, monitoring
+│   │                           # Rook-Ceph, Envoy Gateway, headscale-subnet-router, monitoring
+│   │                           # -- each as <name>/{ks.yaml, app/, config/}
 │   └── apps/                   # immich, home-assistant, jellyfin, paperless-ngx, homepage
 ├── .github/workflows/          # Renovate, CI (kubeconform validation)
 └── docs/runbooks/              # the handful of manual, non-GitOps steps
@@ -42,23 +43,28 @@ home-ops/
 ## Local dev cluster
 
 Hardware (3× Beelink EQ12 Pro) hasn't been purchased yet. Until it arrives, everything is
-developed against a real Talos + Kubernetes cluster running locally via the Docker
-provisioner:
+developed against a real Talos + Kubernetes cluster running locally:
 
 ```bash
-talosctl cluster create --name home-ops-dev --controlplanes 3 --workers 0
+talosctl cluster create docker --name home-ops-dev --workers 0
 ```
 
-This is genuine Talos/Kubernetes, not a stand-in like kind/k3s. Swapping `talos/talconfig.yaml`
-node definitions for real IPs is the only change needed once hardware exists. What can't be
-validated locally: Cilium L2 announcements on a real LAN, Headscale subnet router reachability
-from outside, and end-to-end cloudflared tunnel routing.
+This is genuine Talos/Kubernetes, not a stand-in like kind/k3s. It's single-control-plane
+(not the 3-CP topology `talos/talconfig.yaml` describes for real hardware) — the QEMU
+provisioner that would give 3-CP locally hits a known kexec hang on macOS/Apple Silicon
+([siderolabs/talos#13108](https://github.com/siderolabs/talos/issues/13108)); Docker
+sidesteps it entirely (no VM boot/kexec involved) at the cost of not exercising etcd HA
+locally. Swapping `talos/talconfig.yaml` node definitions for real IPs is the only change
+needed once hardware exists. What can't be validated locally: etcd quorum across multiple
+nodes, Cilium L2 announcements on a real LAN, Rook-Ceph (no raw block devices in a
+Docker-provisioned node), Headscale subnet router reachability from outside, and
+end-to-end cloudflared tunnel routing.
 
 ## Manual steps (everything else is `git push`)
 
 1. [`docs/runbooks/cluster-bootstrap.md`](docs/runbooks/cluster-bootstrap.md) — `talosctl bootstrap`
-2. [`docs/runbooks/secret-zero.md`](docs/runbooks/secret-zero.md) — one `tofu apply` from an
-   authenticated local `op` session
+2. [`docs/runbooks/secret-zero.md`](docs/runbooks/secret-zero.md) — `op inject | kubectl apply`
+   from an authenticated local `op` session
 
 ## Status
 

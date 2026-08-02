@@ -38,7 +38,7 @@ jobs:
               status=1
             fi
             echo "::endgroup::"
-          done < <(find kubernetes -name kustomization.yaml -print0)
+          done < <(find kubernetes bootstrap -name kustomization.yaml -print0)
           exit $status
 
   talos-config:
@@ -56,22 +56,3 @@ jobs:
       - name: Validate talconfig.yaml
         working-directory: talos
         run: talhelper validate talconfig talconfig.yaml
-
-  terraform:
-    name: Validate OpenTofu
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: opentofu/setup-opentofu@v1
-        with:
-          tofu_version: "1.12.5"
-
-      - name: fmt check
-        run: tofu -chdir=terraform/bootstrap fmt -check -diff
-
-      - name: init (no backend, no credentials needed for a syntax check)
-        run: tofu -chdir=terraform/bootstrap init -backend=false
-
-      - name: validate
-        run: tofu -chdir=terraform/bootstrap validate

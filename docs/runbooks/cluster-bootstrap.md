@@ -7,27 +7,40 @@ disaster-recovery rebuild).
 ## Local dev cluster (current target — hardware not yet purchased)
 
 ```bash
-sudo -E "$(asdf which talosctl)" cluster create qemu --name home-ops-dev --controlplanes 3 --workers 0
+talosctl cluster create docker --name home-ops-dev --workers 0
 ```
 
-`sudo` is required on macOS for the QEMU/vmnet networking setup. This uses the real
-Talos + Kubernetes QEMU provisioner (not Docker — the installed talosctl restructured
-`cluster create` into subcommands and the `docker` one no longer supports multi-controlplane;
-see git history for that decision). It generates machine configs, applies them, and
-bootstraps etcd + Kubernetes automatically, waiting until the cluster is ready.
+Single control-plane, no `sudo` needed. It generates machine configs, applies them, and
+bootstraps etcd + Kubernetes automatically, merging the kubeconfig into `~/.kube/config`.
 
-Merge the kubeconfig and confirm:
+Confirm:
 
 ```bash
-talosctl kubeconfig -n 10.5.0.2
 kubectl get nodes
 ```
 
 Tear down when done:
 
 ```bash
-sudo -E "$(asdf which talosctl)" cluster destroy --name home-ops-dev
+talosctl cluster destroy --name home-ops-dev
 ```
+
+### Why Docker, not QEMU
+
+`talosctl cluster create qemu --controlplanes 3 --workers 0` would give a real 3-CP HA
+cluster locally, closer to the eventual hardware topology. It doesn't work on this
+machine: QEMU with `hvf` acceleration on Apple Silicon hits a kexec hang right after
+install (`machined` stops producing any output, the Talos API on port 50000 never comes
+up) — a known, currently-unresolved upstream regression,
+[siderolabs/talos#13108](https://github.com/siderolabs/talos/issues/13108). It also
+requires `sudo`, which leaves `~/.talos` and generated kubeconfig files root-owned and
+awkward to use afterward.
+
+Docker sidesteps the whole problem — no VM boot, no kexec, no root — at the cost of only
+getting a single control-plane node, so etcd HA and multi-node scheduling can't be
+exercised locally. If the upstream kexec bug gets fixed, revisit: QEMU is the more
+faithful topology, and this repo's `talos/talconfig.yaml` already describes the real
+3-node target.
 
 ## Real hardware (once the 3x Beelink EQ12 Pro nodes exist)
 

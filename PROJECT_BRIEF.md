@@ -23,20 +23,23 @@ flag it before deviating.
 | **Headscale** (self-hosted control server) for VPN                                   | Tailscale SaaS                               | User wants zero recurring subscriptions; host on Oracle Cloud "Always Free" tier ARM VM (genuinely free forever) or self-hosted at home if a real public IPv4 is confirmed available                                                       |
 | Headscale **subnet router** for LAN access                                           | Tailscale Kubernetes Operator                | **Operator is incompatible with Headscale** — it requires Tailscale's v2 API/OAuth; Headscale only implements v1 (see juanfont/headscale#3081, #3086). This is not a preference, it's a hard incompatibility. Do not attempt the Operator. |
 | **1Password Service Account + External Secrets Operator's `1password-sdk` provider** | 1Password Connect server, Vaultwarden        | Lighter weight, no extra server to run. User does not want Vaultwarden since 1Password already covers household password management.                                                                                                       |
-| **Zero SOPS** for secrets, except none at all if avoidable                           | SOPS+age for general secrets                 | "Secret zero" (the 1Password Service Account token) is pushed into the cluster via a one-time OpenTofu apply from an authenticated local `op` CLI session — not committed to Git, not SOPS-encrypted.                                      |
-| Longhorn for in-cluster storage                                                      | Rook-Ceph                                    | Simpler, lower overhead, sufficient at this scale                                                                                                                                                                                          |
+| **Zero SOPS** for secrets, except none at all if avoidable                           | SOPS+age for general secrets                 | "Secret zero" (the 1Password Service Account token) is pushed into the cluster via a one-time `op inject \| kubectl apply` from an authenticated local `op` CLI session — not committed to Git, not SOPS-encrypted. (Amended from the original OpenTofu plan: same one-time/not-committed guarantee, no state file. See `docs/runbooks/secret-zero.md`.)                                      |
+| **Rook-Ceph** for in-cluster storage                                                 | Longhorn                                     | Amended from the original Longhorn decision: most widely used in comparable reference repos (onedr0p/home-ops, buroa/k8s-gitops). Needs a dedicated raw block device per node — flagged in `HARDWARE_PLAN.md` as unbudgeted.               |
 | Renovate for dependency updates                                                      | Manual version bumps                         | "Fully as code" requirement — every update should be a mergeable PR                                                                                                                                                                        |
 
 ## Hardware context (informs manifests but doesn't block software work)
 
 - Target: 3× Beelink EQ12 Pro (Intel N100, 16GB RAM, 500GB NVMe) — not yet purchased.
 - Until hardware arrives: **develop against a local Talos cluster** via
-  `talosctl cluster create --controlplanes 3 --workers 0` (Docker provisioner). This is
-  real Talos + real Kubernetes, not a stand-in like kind/k3s — the repo should work
-  unmodified against this, swapping only `talconfig.yaml` node definitions once real
-  hardware/IPs exist.
-- What can't be validated locally: Cilium L2 announcements needing a real LAN, Headscale
-  subnet router reachability from outside, end-to-end cloudflared tunnel routing. Build
+  `talosctl cluster create docker --name home-ops-dev --workers 0` (single control-plane;
+  the QEMU provisioner that would give the real 3-CP topology hits a kexec hang on
+  macOS/Apple Silicon — see `docs/runbooks/cluster-bootstrap.md`). This is real Talos +
+  real Kubernetes, not a stand-in like kind/k3s — the repo should work unmodified against
+  this, swapping only `talconfig.yaml` node definitions once real hardware/IPs exist.
+- What can't be validated locally: etcd HA across multiple nodes, Rook-Ceph (no raw block
+  devices in a Docker-provisioned node), Cilium L2 announcements needing a real LAN,
+  Headscale subnet router reachability from outside, end-to-end cloudflared tunnel
+  routing. Build
   and unit-test the manifests for these anyway; full validation waits for hardware.
 
 ## Deferred by user (do not block on these — stub/document instead)
@@ -55,30 +58,30 @@ exists. Don't block other phases waiting on these.
 
 ```
 home-ops/
-├── .tool-versions              # asdf: talosctl, talhelper, flux2, opentofu, kubectl, helm
+├── .tool-versions              # asdf: talosctl, talhelper, flux2, kubectl, helm
 ├── README.md
 ├── talos/
 │   ├── talconfig.yaml
 │   └── clusterconfig/
-├── terraform/
-│   └── bootstrap/               # secret-zero push, see Phase 3 below
+├── bootstrap/
+│   └── kustomize/                # secret-zero push (op inject + kubectl apply), see Phase 3 below
 ├── kubernetes/
 │   ├── flux/cluster/
-│   ├── infrastructure/
+│   ├── infrastructure/           # each as <name>/{ks.yaml, app/, config/}
 │   │   ├── cilium/
 │   │   ├── cert-manager/
 │   │   ├── cloudflared/
 │   │   ├── external-secrets/
-│   │   ├── longhorn/
+│   │   ├── rook-ceph/
 │   │   ├── envoy-gateway/
 │   │   ├── headscale-subnet-router/
 │   │   └── monitoring/
 │   └── apps/                    # empty scaffolding for now: immich/, home-assistant/,
 │                                 # jellyfin/, paperless-ngx/, homepage/
-├── .github/workflows/           # Renovate config, CI validation (kubeconform/flux diff)
+├── .github/workflows/           # Renovate config, CI validation (kubeconform)
 └── docs/runbooks/
     ├── cluster-bootstrap.md     # talosctl bootstrap step (the one manual step)
-    └── secret-zero.md           # the tofu apply step (the other manual step)
+    └── secret-zero.md           # the op inject step (the other manual step)
 ```
 
 ## Implementation order
@@ -86,12 +89,13 @@ home-ops/
 1. `.tool-versions`, repo init, `gh repo create alexmathieu22/home-ops --public`
 2. `talosctl cluster create` locally (Docker provisioner) as the dev target
 3. `talos/talconfig.yaml` via talhelper, generate configs against the local cluster
-4. `terraform/bootstrap` — OpenTofu reading `OP_SERVICE_ACCOUNT_TOKEN` from env, creates
-   the `external-secrets` namespace + `onepassword-service-account-token` Secret. Leave
-   `OP_SERVICE_ACCOUNT_TOKEN` unset with a clear error/placeholder until 1Password exists.
+4. `bootstrap/kustomize/external-secrets` — a `Secret` manifest referencing
+   `op://infra/eso-service-account/token`, rendered via `op inject` and applied with
+   `kubectl`, creating the `external-secrets` namespace + `onepassword-service-account-token`
+   Secret. No-op with a clear error until 1Password exists and `op` is authenticated.
 5. `flux bootstrap github --owner=alexmathieu22 --repository=home-ops --path=kubernetes/flux/cluster --personal`
 6. Infrastructure HelmReleases in order: Cilium (with LB-IPAM/L2) → cert-manager →
-   external-secrets → cloudflared → Longhorn → Envoy Gateway
+   external-secrets → cloudflared → Rook-Ceph → Envoy Gateway
 7. Headscale subnet router manifests (mark Headscale server hosting as pending/deferred)
 8. kube-prometheus-stack + Loki
 9. Empty app scaffolds for the apps listed above, ready to fill in once storage/DNS/secrets
