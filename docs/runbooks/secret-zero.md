@@ -32,7 +32,7 @@ This creates:
 
 - the `external-secrets` namespace
 - a `onepassword-service-account-token` Secret in that namespace, which ESO's
-  `ClusterSecretStore` (in `kubernetes/infrastructure/external-secrets`) references to
+  `ClusterSecretStore` (in `kubernetes/apps/external-secrets/external-secrets`) references to
   authenticate its 1Password SDK provider
 
 Run this once per cluster lifetime — again only if you rotate the Service Account token.
@@ -69,6 +69,6 @@ with [flux-operator](https://github.com/controlplaneio-fluxcd/flux-operator) + a
 `FluxInstance` CR installed via `helmfile`, making Flux's own install declarative and
 Renovate-bumpable, and pre-seed CRDs cluster-wide before Flux reconciles anything — a
 cleaner fix for the CRD/CR-ordering races this repo instead solves with per-component
-`app/`+`config/` Kustomization splits (see `kubernetes/infrastructure/*/ks.yaml`). That
+`app/`+`config/` Kustomization splits (see `kubernetes/apps/*/*/ks.yaml`). That
 part was judged not worth the added tooling (`helmfile`, `just`) for a bootstrap step
 that already works; revisit if the CRD-race workarounds start feeling like a tax.)

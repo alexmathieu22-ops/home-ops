@@ -1,7 +1,0 @@
-# Scaffold only — HelmRelease/manifests, ExternalSecret, and Gateway API HTTPRoute for
-# jellyfin land once core infra (Longhorn storage, 1Password/ESO secrets, and either
-# Envoy Gateway for internal or cloudflared for public exposure) is actually live.
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: jellyfin

@@ -1,24 +1,11 @@
-# The only two Kustomizations defined centrally -- everything else (per-component
-# ordering/dependsOn) lives colocated in each component's own ks.yaml under
-# kubernetes/infrastructure/<name>/ and kubernetes/apps/<name>/, matching
-# onedr0p/home-ops and buroa/k8s-gitops's convention. These two just point
-# kustomize-controller at the two top-level trees; the nested ks.yaml files (applied as
-# part of the same sync, since they're just YAML from kustomize's point of view) do the
-# real fan-out and dependency chaining.
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: infrastructure
-  namespace: flux-system
-spec:
-  interval: 1h
-  prune: true
-  wait: false
-  sourceRef:
-    kind: GitRepository
-    name: flux-system
-  path: ./kubernetes/infrastructure
----
+# The only Kustomization defined centrally -- everything else (namespace grouping,
+# per-component ordering/dependsOn) lives colocated in each component's own ks.yaml under
+# kubernetes/apps/<namespace>/<name>/, matching onedr0p/home-ops and buroa/k8s-gitops's
+# convention: one apps tree grouped by the K8s namespace things deploy into (kube-system,
+# cert-manager, external-secrets, rook-ceph, networking, observability, default), no
+# separate infrastructure/ vs apps/ split. This just points kustomize-controller at that
+# tree; the nested ks.yaml files (applied as part of the same sync, since they're just
+# YAML from kustomize's point of view) do the real fan-out and dependency chaining.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -28,8 +15,6 @@ spec:
   interval: 1h
   prune: true
   wait: false
-  dependsOn:
-    - name: infrastructure
   sourceRef:
     kind: GitRepository
     name: flux-system
