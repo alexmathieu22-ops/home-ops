@@ -29,6 +29,15 @@ spec:
     ipam:
       mode: kubernetes
 
+    # cilium-operator's control-plane work (IPAM/LB allocation) doesn't need HA at this
+    # scale -- and the chart's default of 2 replicas actively breaks Helm's readiness
+    # wait on a single-node cluster (both replicas share the same hostPorts, so the
+    # second can never schedule, and `helm upgrade --wait` blocks forever). Single
+    # instance, matching the same "no HA needed at homelab scale" call already made for
+    # Loki (SingleBinary mode).
+    operator:
+      replicas: 1
+
     # Talos: cgroups are already mounted, Cilium must not try to remount them.
     cgroup:
       autoMount:
