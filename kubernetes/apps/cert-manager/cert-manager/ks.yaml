@@ -20,10 +20,12 @@ spec:
     name: flux-system
   path: ./kubernetes/apps/cert-manager/cert-manager/app
 ---
-# wait: false is deliberate: this ExternalSecret can't succeed until 1Password exists
-# (PROJECT_BRIEF.md "Deferred") -- Flux would otherwise block this Kustomization forever
-# waiting for its Ready condition. Still applies the object and reports Ready once that
-# succeeds, regardless of the ExternalSecret's own runtime health.
+# wait: true (matching onedr0p/home-ops and buroa/k8s-gitops's actual convention) is
+# correct here, not a problem to route around: this ExternalSecret and the ClusterIssuer
+# it feeds both genuinely can't go healthy until 1Password/Cloudflare exist
+# (PROJECT_BRIEF.md "Deferred"), so staying not-Ready is an accurate signal, not a false
+# green. healthCheckExprs (same pattern as the reference repos) checks the ClusterIssuer's
+# real Ready condition explicitly rather than relying on Flux's generic auto-detection.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -34,8 +36,13 @@ spec:
   timeout: 5m
   retryInterval: 2m
   prune: true
-  wait: false
+  wait: true
   targetNamespace: cert-manager
+  healthCheckExprs:
+    - apiVersion: cert-manager.io/v1
+      kind: ClusterIssuer
+      failed: status.conditions.filter(e, e.type == 'Ready').all(e, e.status == 'False')
+      current: status.conditions.filter(e, e.type == 'Ready').all(e, e.status == 'True')
   dependsOn:
     - name: cert-manager
     # external-secrets-config (not just external-secrets) -- this ExternalSecret
