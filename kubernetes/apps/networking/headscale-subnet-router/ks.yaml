@@ -1,3 +1,6 @@
+# wait: false is deliberate: this ExternalSecret can't succeed until 1Password exists,
+# and Headscale server hosting itself is separately deferred (PROJECT_BRIEF.md) -- Flux
+# would otherwise block this Kustomization forever waiting for its Ready condition.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -8,7 +11,7 @@ spec:
   timeout: 5m
   retryInterval: 2m
   prune: true
-  wait: true
+  wait: false
   targetNamespace: networking
   dependsOn:
     - name: rook-ceph-cluster
