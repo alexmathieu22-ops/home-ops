@@ -3,9 +3,9 @@
 # for this; Cilium LB-IPAM (kubernetes/apps/kube-system/cilium/config/ippool.yaml) assigns it an
 # IP from the internal pool automatically.
 #
-# TODO: replace the placeholder hostname once a real domain exists (PROJECT_BRIEF.md
-# "Deferred") — matches the ClusterIssuer's DNS zone in
-# kubernetes/apps/cert-manager/cert-manager/config/clusterissuer.yaml.
+# Matches the ClusterIssuer's DNS zone in
+# kubernetes/apps/cert-manager/cert-manager/config/clusterissuer.yaml. Still won't
+# actually issue a cert until the Cloudflare API token exists (deferred).
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -19,14 +19,14 @@ spec:
     - name: http
       protocol: HTTP
       port: 80
-      hostname: "*.replace-me.example.com"
+      hostname: "*.internal.alexandremathieu.com"
       allowedRoutes:
         namespaces:
           from: All
     - name: https
       protocol: HTTPS
       port: 443
-      hostname: "*.replace-me.example.com"
+      hostname: "*.internal.alexandremathieu.com"
       tls:
         mode: Terminate
         certificateRefs:

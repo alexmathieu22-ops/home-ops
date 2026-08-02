@@ -22,10 +22,11 @@ spec:
         - name: tailscale
           image: ghcr.io/tailscale/tailscale:v1.98.10
           env:
-            # TODO: real Headscale server URL once hosting location is decided
-            # (Oracle Free Tier vs. home — pending CGNAT check).
+            # Domain is real; hosting location (Oracle Free Tier vs. home) is still
+            # pending a CGNAT check (PROJECT_BRIEF.md) -- point this DNS record at
+            # wherever Headscale ends up running.
             - name: TS_LOGIN_SERVER
-              value: https://headscale.replace-me.example.com
+              value: https://headscale.alexandremathieu.com
             - name: TS_AUTHKEY
               valueFrom:
                 secretKeyRef:
