@@ -31,12 +31,13 @@ spec:
     cephClusterSpec:
       mon:
         count: 3
-        # Rook refuses to schedule 3 mons on fewer than 3 nodes unless this is set --
-        # without it the CephCluster gets permanently stuck ("cannot start 3 mons on 1
-        # node(s)"), which in turn blocks the whole HelmRelease's `--wait` forever.
-        # Harmless on real 3-node hardware: Rook still prefers spreading mons across
-        # distinct nodes when enough exist, this only removes the hard block when there
-        # aren't enough.
+        # Required for the local single-node Docker dev cluster (talosctl cluster create
+        # docker --workers 0): Rook refuses to schedule 3 mons on fewer than 3 nodes
+        # unless this is set, and without it the CephCluster gets permanently stuck
+        # ("cannot start 3 mons on 1 node(s)"), blocking the whole HelmRelease's `--wait`
+        # forever. Harmless to also carry into the real 3-node hardware config: Rook
+        # still prefers spreading mons across distinct nodes when enough exist, this only
+        # removes the hard block for when there aren't enough.
         allowMultiplePerNode: true
       mgr:
         modules:
