@@ -8,7 +8,7 @@ the 1Password Service Account token. That's "secret zero."
 It's pushed into the cluster by rendering
 [`bootstrap/kustomize/external-secrets`](../../bootstrap/kustomize/external-secrets) —
 a plain `Secret` manifest whose value is a 1Password reference
-(`op://infra/eso-service-account/token`) — through `op inject`, which substitutes the
+(`op://home-ops/eso-service-account/token`) — through `op inject`, which substitutes the
 real value inline, then applying the result with `kubectl`. No state file, no Terraform
 provider: the Secret object in the cluster is the only source of truth, and re-running
 the apply is always safe. It is never committed to Git and never SOPS-encrypted (the
@@ -17,7 +17,7 @@ committed manifest only ever contains the `op://` reference, not a real value).
 ## Prerequisites (deferred — not done yet, per PROJECT_BRIEF.md)
 
 - [ ] 1Password account
-- [ ] A dedicated vault named `infra` for infra secrets (separate from your personal vault)
+- [ ] A dedicated vault named `home-ops` for infra secrets (separate from your personal vault)
 - [ ] A 1Password **Service Account**, scoped only to that vault, with an item named
       `eso-service-account` holding the token in a field named `token`
 - [ ] `op` CLI installed and signed in locally (no asdf plugin for it — install separately)

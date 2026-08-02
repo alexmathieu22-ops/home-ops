@@ -91,7 +91,7 @@ home-ops/
 2. `talosctl cluster create` locally (Docker provisioner) as the dev target
 3. `talos/talconfig.yaml` via talhelper, generate configs against the local cluster
 4. `bootstrap/kustomize/external-secrets` — a `Secret` manifest referencing
-   `op://infra/eso-service-account/token`, rendered via `op inject` and applied with
+   `op://home-ops/eso-service-account/token`, rendered via `op inject` and applied with
    `kubectl`, creating the `external-secrets` namespace + `onepassword-service-account-token`
    Secret. No-op with a clear error until 1Password exists and `op` is authenticated.
 5. `flux bootstrap github --owner=alexmathieu22 --repository=home-ops --path=kubernetes/flux/cluster --personal`
