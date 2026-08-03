@@ -186,6 +186,13 @@ subnet router — including the in-cluster Envoy Gateway at
 
 ## Notes
 
+- **Oracle's stock image pre-blocks non-SSH ports**: the base Ubuntu image ships
+  `iptables` rules (only `tcp/22` accepted, everything else `REJECT`ed) that sit ahead of
+  `ufw`'s own chains, so `ufw allow 443/tcp` etc. silently has no effect until those are
+  cleared first. Cloud-init handles this (`iptables -F INPUT` + `-P INPUT ACCEPT` before
+  the `ufw` rules), but if a VM behaves like this — SSH works, 80/443 give `Connection
+  refused` from outside despite `ufw status` showing them allowed — check
+  `sudo iptables -L INPUT -n --line-numbers` for a leftover `REJECT` rule.
 - **State file**: `terraform/headscale/terraform.tfstate` is local and gitignored (along
   with `terraform.tfvars`) — nothing backs it up. Fine for a single-operator personal
   setup where losing it just means re-importing or recreating the VM; revisit with a

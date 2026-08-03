@@ -56,6 +56,12 @@ runcmd:
     EOF
 
   # --- OS firewall -- defense in depth on top of the OCI security list ---
+  # Oracle's stock Ubuntu image ships pre-existing iptables rules (ACCEPT only tcp/22,
+  # REJECT everything else) that sit ahead of ufw's own chains in INPUT, so ufw's allow
+  # rules below would otherwise never get evaluated -- clear those first.
+  - iptables -F INPUT
+  - iptables -P INPUT ACCEPT
+  - netfilter-persistent save
   - ufw allow OpenSSH
   - ufw allow 443/tcp
   - ufw allow 80/tcp
