@@ -25,8 +25,11 @@ OpenTofu config in [`terraform/headscale/`](../../terraform/headscale) rather th
 hand — this is the one place in the repo where Terraform/OpenTofu earns its keep (real
 cloud resources with real lifecycle, per the reasoning in `docs/runbooks/secret-zero.md`'s
 "Why not OpenTofu" section, which explicitly carves out this VM as the exception). It also
-bakes in a cloud-init script that installs and configures Headscale + Caddy on first boot,
-so there's no manual SSH setup step at all.
+bakes in a cloud-init script that installs and configures Headscale on first boot, so
+there's no manual SSH setup step at all. Headscale terminates TLS itself (built-in ACME,
+binding `:443` directly via the systemd unit's `CAP_NET_BIND_SERVICE`) rather than sitting
+behind a reverse proxy -- there's only ever one service on this VM, so a separate proxy
+(Caddy, nginx, etc.) wouldn't be pulling any real weight.
 
 ## 1. OCI API credentials
 
@@ -83,25 +86,32 @@ different region may be the only lever left.
 **Current state**: `ca-montreal-1` hit zero Ampere A1 capacity across 500+ retries, so
 `instance.tf` is temporarily on `VM.Standard.E2.1.Micro` instead (a separate, uncontended
 Always-Free x86 allowance — 1/8 OCPU / 1GB RAM, fixed, no `shape_config`). It's tight for
-Headscale + Caddy under real load; switch back to `VM.Standard.A1.Flex` (see git history
-for the exact block) once Ampere capacity frees up.
+Headscale under real load; switch back to `VM.Standard.A1.Flex` (see git history for the
+exact block) once Ampere capacity frees up.
 
-Cloud-init takes a minute or two after the VM boots to install Headscale, install Caddy,
-write both configs, and start both services — `tofu apply` returns before that finishes.
-Confirm it's done:
+Cloud-init takes a minute or two after the VM boots to install Headscale, write its config,
+and start the service — `tofu apply` returns before that finishes. Confirm it's done:
 
 ```bash
-ssh ubuntu@$(tofu output -raw public_ip) 'systemctl is-active headscale caddy'
+ssh ubuntu@$(tofu output -raw public_ip) 'systemctl is-active headscale'
 ```
 
-Caddy requests and renews its Let's Encrypt cert automatically on first HTTPS request — no
-separate certbot step, and no manual config editing: `server_url`, the embedded DERP
-relay, and `dns.base_domain: internal.alexandremathieu.com` are all set by the cloud-init
-template in `terraform/headscale/cloud-init.yaml.tftpl`. That `base_domain` gives tailnet
-devices short names (`<device>.internal.alexandremathieu.com`) resolved over MagicDNS —
-separate from, and not requiring, the in-cluster Envoy Gateway's own use of that same
+Headscale requests and renews its own Let's Encrypt cert automatically (built-in ACME,
+`tls_letsencrypt_*` config keys) — no separate certbot/proxy step, and no manual config
+editing: `server_url`, the ACME settings, the embedded DERP relay, and
+`dns.base_domain: internal.alexandremathieu.com` are all set by the cloud-init template in
+`terraform/headscale/cloud-init.yaml.tftpl`. That `base_domain` gives tailnet devices short
+names (`<device>.internal.alexandremathieu.com`) resolved over MagicDNS — separate from,
+and not requiring, the in-cluster Envoy Gateway's own use of that same
 `*.internal.alexandremathieu.com` zone (they don't overlap in practice since one resolves
 device names and the other resolves app hostnames).
+
+Note also several fields cloud-init sets that aren't in Headscale's older/example configs
+you may find online: `noise.private_key_path`, `prefixes.v4`/`v6`, and
+`derp.server.private_key_path` are all fatal-if-missing as of this Headscale version
+(confirmed live — the server refused to start without each one, one at a time). If
+upgrading `headscale_version` ever breaks startup again, `journalctl -u headscale` will
+name the exact missing field.
 
 ## 4. Create a pre-auth key
 
@@ -156,16 +166,17 @@ sudo headscale nodes list
 ## 7. Update the advertised route and approve it
 
 `TS_ROUTES` in
-[`statefulset.yaml`](../../kubernetes/apps/networking/headscale-subnet-router/app/statefulset.yaml)
+[`statefulset.yaml`](../../kubernetes/apps/vpn/headscale-subnet-router/app/statefulset.yaml)
 is still the placeholder `192.168.1.0/24` — replace it with the real home LAN CIDR once
 that's known (check the router's LAN subnet), commit, push, let Flux roll it out.
 
-Headscale doesn't auto-approve advertised routes even from a trusted node — enable it
-explicitly:
+Headscale doesn't auto-approve advertised routes even from a trusted node — approve it
+explicitly (this Headscale version moved routes under `nodes`, not a standalone `routes`
+command):
 
 ```bash
-sudo headscale routes list
-sudo headscale routes enable -r <route-id-from-above>
+sudo headscale nodes list-routes
+sudo headscale nodes approve-routes -i <node-id-from-above> -r 192.168.1.0/24
 ```
 
 ## 8. Add personal devices to the tailnet
