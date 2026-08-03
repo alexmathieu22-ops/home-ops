@@ -82,10 +82,14 @@ and end-to-end cloudflared tunnel routing.
 3. [`docs/runbooks/cloudflare-setup.md`](docs/runbooks/cloudflare-setup.md) — API token +
    Tunnel token into 1Password (not required for Headscale/VPN, only for public exposure
    and the internal Gateway's TLS cert)
+4. [`docs/runbooks/headscale-oracle-cloud.md`](docs/runbooks/headscale-oracle-cloud.md) —
+   stand up the Headscale control server on an Oracle Cloud Always Free VM (outside the
+   cluster by design), then wire the in-cluster subnet router to it
 
 ## Status
 
 Bootstrapping. Local dev cluster live with Flux reconciling; 1Password and Cloudflare are
 both set up and verified end-to-end (`cert-manager-config`, `cloudflared` both `Ready`).
-Remaining: Headscale server hosting (pending a CGNAT check), real hardware, and the apps
+Headscale hosting location decided (Oracle Cloud Always Free VM, runbook above) but not
+yet provisioned. Remaining: standing up Headscale itself, real hardware, and the apps
 themselves. See task list / commit history for current phase.
