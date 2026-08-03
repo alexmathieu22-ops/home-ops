@@ -1,7 +1,5 @@
-# wait: true (matching onedr0p/home-ops and buroa/k8s-gitops's convention): this
-# ExternalSecret genuinely can't succeed until 1Password exists, and Headscale server
-# hosting itself is separately deferred (PROJECT_BRIEF.md) -- staying not-Ready is
-# accurate, not a false green.
+# wait: true (matching onedr0p/home-ops and buroa/k8s-gitops's convention): staying
+# not-Ready until the ExternalSecret actually succeeds is accurate, not a false green.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -13,7 +11,7 @@ spec:
   retryInterval: 2m
   prune: true
   wait: true
-  targetNamespace: networking
+  targetNamespace: vpn
   healthCheckExprs:
     - apiVersion: external-secrets.io/v1
       kind: ExternalSecret
@@ -25,4 +23,4 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./kubernetes/apps/networking/headscale-subnet-router/app
+  path: ./kubernetes/apps/vpn/headscale-subnet-router/app
