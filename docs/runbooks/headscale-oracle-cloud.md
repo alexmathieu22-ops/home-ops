@@ -65,10 +65,20 @@ tofu plan   # review: 1 VCN, 1 subnet, 1 security list, 1 instance, 1 DNS record
 tofu apply
 ```
 
-Always-Free Ampere capacity is genuinely scarce in some regions — if this fails with
-`Out of host capacity`, wait a bit and retry, or try a different
-`availability_domain_index` in `terraform.tfvars` (a region has 1-3 ADs; not all may have
-free Ampere capacity at a given moment).
+Always-Free Ampere capacity is genuinely scarce in some regions and fluctuates by the
+minute — `Out of host capacity` on the instance is expected, not a config error (the
+networking resources above it will have applied fine; re-running only retries the
+instance). Either retry `tofu apply` by hand every so often, or let it retry for you:
+
+```bash
+bash retry-apply.sh          # retries every 60s until it succeeds
+bash retry-apply.sh 30       # or pass a custom interval in seconds
+```
+
+If it's still failing after a long while, try a different `availability_domain_index` in
+`terraform.tfvars` (a region has 1-3 ADs; not all may have free Ampere capacity at a given
+moment) — though single-AD regions like `ca-montreal-1` don't have that option, so a
+different region may be the only lever left.
 
 Cloud-init takes a minute or two after the VM boots to install Headscale, install Caddy,
 write both configs, and start both services — `tofu apply` returns before that finishes.
