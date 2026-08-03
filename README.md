@@ -19,6 +19,7 @@ self-hosted Headscale.
 | Observability    | kube-prometheus-stack + Loki                                |
 | Dependency mgmt  | [Renovate](https://docs.renovatebot.com/)                   |
 | Tool versions    | [asdf](https://asdf-vm.com/)                                 |
+| VPN host provisioning | [OpenTofu](https://opentofu.org/) (Oracle Cloud VM + DNS only, see below) |
 
 See [PROJECT_BRIEF.md](../PROJECT_BRIEF.md), [E2E_PLAN.md](../E2E_PLAN.md), and
 [HARDWARE_PLAN.md](../HARDWARE_PLAN.md) for the full rationale and rollout plan.
@@ -29,6 +30,11 @@ See [PROJECT_BRIEF.md](../PROJECT_BRIEF.md), [E2E_PLAN.md](../E2E_PLAN.md), and
 home-ops/
 ├── .tool-versions              # asdf-managed CLI versions
 ├── talos/                      # talhelper config + generated machine configs (gitignored)
+├── terraform/
+│   └── headscale/               # OpenTofu: Oracle Cloud VM + DNS for Headscale -- the one
+│                                 # place in the repo Terraform is used (real cloud
+│                                 # resources with real lifecycle; see secret-zero.md for
+│                                 # why it's not used for secrets)
 ├── bootstrap/
 │   ├── kustomize/               # secret-zero: op inject + kubectl apply, no Terraform
 │   └── helmfile/                # installs Cilium before Flux exists (chicken-and-egg:
@@ -83,8 +89,9 @@ and end-to-end cloudflared tunnel routing.
    Tunnel token into 1Password (not required for Headscale/VPN, only for public exposure
    and the internal Gateway's TLS cert)
 4. [`docs/runbooks/headscale-oracle-cloud.md`](docs/runbooks/headscale-oracle-cloud.md) —
-   stand up the Headscale control server on an Oracle Cloud Always Free VM (outside the
-   cluster by design), then wire the in-cluster subnet router to it
+   `tofu apply` the Oracle Cloud Always Free VM (outside the cluster by design, provisioned
+   via [`terraform/headscale/`](terraform/headscale)), then wire the in-cluster subnet
+   router to it
 
 ## Status
 
