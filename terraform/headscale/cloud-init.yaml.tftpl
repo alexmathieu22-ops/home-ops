@@ -11,7 +11,7 @@ packages:
 
 runcmd:
   # --- Headscale ---
-  - curl -fsSL -o /tmp/headscale.deb "https://github.com/juanfont/headscale/releases/download/v${headscale_version}/headscale_${headscale_version}_linux_arm64.deb"
+  - curl -fsSL -o /tmp/headscale.deb "https://github.com/juanfont/headscale/releases/download/v${headscale_version}/headscale_${headscale_version}_linux_amd64.deb"
   - dpkg -i /tmp/headscale.deb
 
   # --- Caddy (official apt repo) ---
