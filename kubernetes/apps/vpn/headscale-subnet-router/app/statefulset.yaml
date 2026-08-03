@@ -22,10 +22,6 @@ spec:
         - name: tailscale
           image: ghcr.io/tailscale/tailscale:v1.98.10
           env:
-            # Headscale runs on an Oracle Cloud VM, provisioned via terraform/headscale
-            # (see docs/runbooks/headscale-oracle-cloud.md).
-            - name: TS_LOGIN_SERVER
-              value: https://headscale.alexandremathieu.com
             - name: TS_AUTHKEY
               valueFrom:
                 secretKeyRef:
@@ -46,8 +42,19 @@ spec:
               value: ""
             - name: TS_ACCEPT_DNS
               value: "false"
+            # TS_LOGIN_SERVER is NOT a real containerboot env var (confirmed against
+            # current cmd/containerboot source -- it's silently ignored, which is why this
+            # was connecting to Tailscale's own coordination server instead of Headscale).
+            # --login-server is a flag to `tailscale up`, passed via TS_EXTRA_ARGS instead.
+            # Headscale runs on an Oracle Cloud VM, provisioned via terraform/headscale
+            # (see docs/runbooks/headscale-oracle-cloud.md).
+            #
+            # No --advertise-tags: Headscale rejects any tag that isn't pre-declared as
+            # owned in an ACL policy ("requested tags [...] are invalid or not permitted"),
+            # and no ACL policy is configured yet -- add one and reintroduce a tag if
+            # tag-based ACLs are ever needed.
             - name: TS_EXTRA_ARGS
-              value: --advertise-tags=tag:subnet-router
+              value: --login-server=https://headscale.alexandremathieu.com
           securityContext:
             capabilities:
               add:
