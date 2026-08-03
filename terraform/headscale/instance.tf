@@ -16,13 +16,14 @@ resource "oci_core_instance" "headscale" {
   compartment_id      = var.oci_compartment_ocid
   availability_domain = data.oci_identity_availability_domains.ads.availability_domains[var.availability_domain_index].name
   display_name        = "headscale"
-  # Always-Free Ampere shape -- 1 OCPU / 6GB is comfortably inside the 4 OCPU / 24GB
-  # total allowance, leaving room for a second Always-Free instance later if wanted.
+  # Always-Free Ampere shape -- the full current allowance (Oracle halved this in 2026;
+  # it used to be 4 OCPU / 24GB). Using it all on one instance since nothing else is
+  # planned for this tenancy; split it if a second Always-Free instance is wanted later.
   shape = "VM.Standard.A1.Flex"
 
   shape_config {
-    ocpus         = 1
-    memory_in_gbs = 6
+    ocpus         = 2
+    memory_in_gbs = 12
   }
 
   source_details {
