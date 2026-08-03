@@ -106,18 +106,19 @@ device names and the other resolves app hostnames).
 ## 4. Create a pre-auth key
 
 Cloud-init already ran `headscale users create home-ops` on first boot. SSH in and mint
-the key:
+the key -- newer Headscale CLI versions want the user's numeric ID, not the username, for
+`--user` (check it with `headscale users list` if it's not `1`):
 
 ```bash
 ssh ubuntu@$(tofu output -raw public_ip)
-sudo headscale preauthkeys create --user home-ops --reusable --expiration 8760h
+sudo headscale preauthkeys create --user 1 --reusable --expiration 8760h
 ```
 
 `--reusable` because the same key authenticates both the in-cluster subnet router and any
 personal devices you add later; `8760h` (1 year) avoids re-minting it constantly — rotate
 it the same way if it ever needs invalidating (`headscale preauthkeys expire`).
 
-Copy the printed key (a single `tskey-auth-...` string).
+Copy the printed key (a single `hskey-auth-...` string).
 
 ## 5. Store the key in 1Password
 
