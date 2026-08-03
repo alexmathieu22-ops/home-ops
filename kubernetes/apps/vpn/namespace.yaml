@@ -1,0 +1,13 @@
+# Separate from "networking" specifically so this PodSecurity override is scoped to only
+# the workload that needs it -- headscale-subnet-router needs NET_ADMIN/NET_RAW
+# capabilities and a hostPath /dev/net/tun mount to work as a VPN subnet router, both
+# disallowed above "privileged". Everything else in networking (cloudflared,
+# envoy-gateway, gateway-api-crds) stays under the cluster's stricter default.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vpn
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged

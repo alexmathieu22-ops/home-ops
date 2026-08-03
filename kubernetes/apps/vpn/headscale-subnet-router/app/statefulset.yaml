@@ -6,7 +6,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: headscale-subnet-router
-  namespace: networking
+  namespace: vpn
 spec:
   serviceName: headscale-subnet-router
   replicas: 1
@@ -22,9 +22,8 @@ spec:
         - name: tailscale
           image: ghcr.io/tailscale/tailscale:v1.98.10
           env:
-            # Domain is real; hosting location (Oracle Free Tier vs. home) is still
-            # pending a CGNAT check (PROJECT_BRIEF.md) -- point this DNS record at
-            # wherever Headscale ends up running.
+            # Headscale runs on an Oracle Cloud VM, provisioned via terraform/headscale
+            # (see docs/runbooks/headscale-oracle-cloud.md).
             - name: TS_LOGIN_SERVER
               value: https://headscale.alexandremathieu.com
             - name: TS_AUTHKEY
@@ -39,6 +38,12 @@ spec:
               value: "false"
             - name: TS_STATE_DIR
               value: /var/lib/tailscale
+            # TS_KUBE_SECRET defaults to "tailscale" and takes precedence over
+            # TS_STATE_DIR when running on Kubernetes -- disable it so state goes only to
+            # the PVC above, avoiding needing RBAC for a Secret this Pod would otherwise
+            # try to read/write.
+            - name: TS_KUBE_SECRET
+              value: ""
             - name: TS_ACCEPT_DNS
               value: "false"
             - name: TS_EXTRA_ARGS

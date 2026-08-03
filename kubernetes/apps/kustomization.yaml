@@ -6,5 +6,6 @@ resources:
   - external-secrets
   - rook-ceph
   - networking
+  - vpn
   - observability
   - default
