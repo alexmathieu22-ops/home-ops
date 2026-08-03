@@ -68,10 +68,10 @@ It's also the more consistent choice given this project's own stated design phil
 the same "fewer moving parts" reasoning behind picking Longhorn-then-Rook-Ceph over
 heavier alternatives and the 1Password SDK provider over running a Connect server.
 
-Terraform/OpenTofu would earn its keep for E2E_PLAN.md's *optional* future step of
-provisioning the Oracle Cloud Headscale VM and a Cloudflare DNS zone — real cloud
-resources with real lifecycle, where its value is genuine. That's the point to introduce
-it, not for a single static secret today.
+Terraform/OpenTofu does earn its keep elsewhere in this repo: `terraform/headscale`
+(see `docs/runbooks/headscale-oracle-cloud.md`) provisions the Oracle Cloud Headscale VM
+and its Cloudflare DNS record — real cloud resources with real lifecycle, where its value
+is genuine. That's the point to introduce it, not for a single static secret like this one.
 
 (Reference repos in this space, e.g. [onedr0p/home-ops](https://github.com/onedr0p/home-ops)
 and [buroa/k8s-gitops](https://github.com/buroa/k8s-gitops), use this same `op inject`

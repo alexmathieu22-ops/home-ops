@@ -1,0 +1,23 @@
+# Copy to terraform.tfvars (gitignored) and fill in real values.
+# OCI values come from: Console -> profile icon -> Tenancy (tenancy ocid), User settings
+# (user ocid), API Keys section (fingerprint + where you saved the private key).
+
+oci_tenancy_ocid     = "ocid1.tenancy.oc1..xxxxx"
+oci_user_ocid        = "ocid1.user.oc1..xxxxx"
+oci_fingerprint       = "xx:xx:xx:...:xx"
+oci_private_key_path = "~/.oci/headscale-terraform.pem"
+oci_region            = "us-ashburn-1"
+oci_compartment_ocid  = "ocid1.tenancy.oc1..xxxxx" # root compartment ocid == tenancy ocid
+
+availability_domain_index = 0
+
+ssh_public_key = "ssh-ed25519 AAAA... you@example.com"
+
+domain              = "alexandremathieu.com"
+headscale_subdomain = "headscale"
+
+# Reuse the same scoped token from docs/runbooks/cloudflare-setup.md (or a separate one
+# with identical "Edit zone DNS" permissions), and the zone ID from the Cloudflare
+# dashboard's zone overview page (right sidebar).
+cloudflare_api_token = "xxxxx"
+cloudflare_zone_id   = "xxxxx"

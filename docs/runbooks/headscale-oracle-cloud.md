@@ -18,132 +18,82 @@ $0/month indefinitely (not a trial).
 - [x] 1Password vault/Service Account set up (`docs/runbooks/secret-zero.md`)
 - [ ] An Oracle Cloud account (email + phone verification; a credit card is required to
       sign up but Always Free resources are never billed)
+- [ ] `tofu` installed (`asdf install` picks up the pinned version in `.tool-versions`)
 
-## 1. Create the VM
+The VM, its networking/firewall rules, and the DNS record are provisioned with the
+OpenTofu config in [`terraform/headscale/`](../../terraform/headscale) rather than by
+hand — this is the one place in the repo where Terraform/OpenTofu earns its keep (real
+cloud resources with real lifecycle, per the reasoning in `docs/runbooks/secret-zero.md`'s
+"Why not OpenTofu" section, which explicitly carves out this VM as the exception). It also
+bakes in a cloud-init script that installs and configures Headscale + Caddy on first boot,
+so there's no manual SSH setup step at all.
 
-Oracle Cloud Console → **Compute** → **Instances** → **Create instance**.
+## 1. OCI API credentials
 
-- **Name**: `headscale`
-- **Image**: Ubuntu 24.04 (or later LTS) — Always Free-eligible
-- **Shape**: click **Change shape** → **Ampere** → `VM.Standard.A1.Flex` → 1 OCPU / 6GB RAM
-  (comfortably inside the Always Free 4 OCPU / 24GB Ampere allowance)
-- **Networking**: create a new VCN if you don't have one (defaults are fine) — it needs a
-  public subnet with internet gateway, which the console's default VCN wizard sets up
-- **Add SSH key**: paste your public key (or let the console generate one and download it —
-  either works, but pasting your own means you don't have to manage a new keypair)
+OpenTofu needs its own API key, separate from your Console login.
 
-Create it, then note the **public IPv4 address** shown on the instance's detail page.
+Console → profile icon (top right) → **My profile** → **API keys** → **Add API key** →
+**Generate API key pair** → download the private key → **Add**. Save the downloaded key
+somewhere durable (e.g. `~/.oci/headscale-terraform.pem`) — it's never committed, and
+Oracle doesn't let you re-download it. The confirmation dialog shows a config snippet with
+your `user`, `fingerprint`, and `tenancy` OCIDs — copy those for the next step.
 
-## 2. Open the required ports
-
-Oracle Cloud's security lists/NSGs block everything by default, on top of the OS firewall.
-Both need opening.
-
-**VCN Security List** — instance detail page → subnet link → **Security Lists** → default
-list → **Add Ingress Rules**:
-
-| Source CIDR | Protocol | Port | Purpose |
-| --- | --- | --- | --- |
-| `0.0.0.0/0` | TCP | 443 | Headscale HTTPS (control server + embedded DERP) |
-| `0.0.0.0/0` | TCP | 80 | Let's Encrypt HTTP-01 challenge |
-| `0.0.0.0/0` | UDP | 3478 | DERP relay (STUN) |
-
-**OS firewall** (Ubuntu ships with `iptables` rules from Oracle's image that also block
-these — `ufw` is simpler to reason about):
+## 2. Configure variables
 
 ```bash
-ssh ubuntu@<vm-public-ip>
-sudo apt update && sudo apt install -y ufw
-sudo ufw allow OpenSSH
-sudo ufw allow 443/tcp
-sudo ufw allow 80/tcp
-sudo ufw allow 3478/udp
-sudo ufw --force enable
+cd terraform/headscale
+cp terraform.tfvars.example terraform.tfvars
 ```
 
-## 3. DNS record
+Fill in `terraform.tfvars` (gitignored) using:
 
-Cloudflare dashboard → your zone → **DNS** → **Add record**:
+- `oci_tenancy_ocid`, `oci_user_ocid`, `oci_fingerprint`, `oci_private_key_path` — from
+  step 1
+- `oci_region`, `oci_compartment_ocid` — region shown in the Console's top-right region
+  selector; the compartment OCID can be the tenancy OCID itself for a single-VM personal
+  setup (root compartment)
+- `ssh_public_key` — your public key, e.g. `cat ~/.ssh/id_ed25519.pub`
+- `cloudflare_api_token`, `cloudflare_zone_id` — reuse the same scoped API token from
+  `docs/runbooks/cloudflare-setup.md` step 1 (or mint a second one with identical "Edit
+  zone DNS" permissions); zone ID is on the domain's Cloudflare dashboard overview page
 
-| Type | Name | Content | Proxy status |
-| --- | --- | --- | --- |
-| A | `headscale` | `<vm-public-ip>` | **DNS only** (grey cloud) |
-
-Proxying (orange cloud) must be off — Headscale's clients need to reach the VM directly,
-and Cloudflare's proxy doesn't forward the UDP DERP traffic anyway.
-
-## 4. Install Headscale + Caddy
-
-Headscale as a native binary (systemd-managed), Caddy in front of it for automatic TLS —
-simpler than running Headscale's own manual cert handling.
+## 3. Apply
 
 ```bash
-# Headscale
-HEADSCALE_VERSION=0.29.3   # check https://github.com/juanfont/headscale/releases for latest
-curl -fsSL -o headscale.deb \
-  "https://github.com/juanfont/headscale/releases/download/v${HEADSCALE_VERSION}/headscale_${HEADSCALE_VERSION}_linux_arm64.deb"
-sudo dpkg -i headscale.deb
-sudo systemctl enable headscale
-
-# Caddy (official apt repo)
-sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | \
-  sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | \
-  sudo tee /etc/apt/sources.list.d/caddy-stable.list
-sudo apt update && sudo apt install -y caddy
+tofu init
+tofu plan   # review: 1 VCN, 1 subnet, 1 security list, 1 instance, 1 DNS record
+tofu apply
 ```
 
-Edit `/etc/headscale/config.yaml` — the relevant keys:
+Always-Free Ampere capacity is genuinely scarce in some regions — if this fails with
+`Out of host capacity`, wait a bit and retry, or try a different
+`availability_domain_index` in `terraform.tfvars` (a region has 1-3 ADs; not all may have
+free Ampere capacity at a given moment).
 
-```yaml
-server_url: https://headscale.alexandremathieu.com
-listen_addr: 127.0.0.1:8080 # Caddy fronts this; not exposed directly
-metrics_listen_addr: 127.0.0.1:9090
-
-derp:
-  server:
-    enabled: true
-    region_id: 999
-    stun_listen_addr: 0.0.0.0:3478
-  urls: [] # disable Tailscale's public DERP map, use only the embedded server above
-
-database:
-  type: sqlite
-  sqlite:
-    path: /var/lib/headscale/db.sqlite
-
-dns:
-  magic_dns: true
-  base_domain: internal.alexandremathieu.com
-```
-
-`base_domain` gives tailnet devices short names (`<device>.internal.alexandremathieu.com`)
-resolved over MagicDNS — separate from, and not requiring, the in-cluster Envoy Gateway's
-own use of that same `*.internal.alexandremathieu.com` zone (they don't overlap in practice
-since one resolves device names and the other resolves app hostnames).
-
-Configure Caddy — replace `/etc/caddy/Caddyfile`:
-
-```caddyfile
-headscale.alexandremathieu.com {
-    reverse_proxy 127.0.0.1:8080
-}
-```
+Cloud-init takes a minute or two after the VM boots to install Headscale, install Caddy,
+write both configs, and start both services — `tofu apply` returns before that finishes.
+Confirm it's done:
 
 ```bash
-sudo systemctl restart caddy
-sudo systemctl start headscale
-sudo systemctl status headscale caddy --no-pager
+ssh ubuntu@$(tofu output -raw public_ip) 'systemctl is-active headscale caddy'
 ```
 
-Caddy requests and renews the Let's Encrypt cert automatically on first request — no
-separate certbot step.
+Caddy requests and renews its Let's Encrypt cert automatically on first HTTPS request — no
+separate certbot step, and no manual config editing: `server_url`, the embedded DERP
+relay, and `dns.base_domain: internal.alexandremathieu.com` are all set by the cloud-init
+template in `terraform/headscale/cloud-init.yaml.tftpl`. That `base_domain` gives tailnet
+devices short names (`<device>.internal.alexandremathieu.com`) resolved over MagicDNS —
+separate from, and not requiring, the in-cluster Envoy Gateway's own use of that same
+`*.internal.alexandremathieu.com` zone (they don't overlap in practice since one resolves
+device names and the other resolves app hostnames).
 
-## 5. Create a user and pre-auth key
+## 4. Create a pre-auth key
+
+Cloud-init already ran `headscale users create home-ops` on first boot. SSH in and mint
+the key:
 
 ```bash
-sudo headscale users create home-ops
+ssh ubuntu@$(tofu output -raw public_ip)
 sudo headscale preauthkeys create --user home-ops --reusable --expiration 8760h
 ```
 
@@ -153,7 +103,7 @@ it the same way if it ever needs invalidating (`headscale preauthkeys expire`).
 
 Copy the printed key (a single `tskey-auth-...` string).
 
-## 6. Store the key in 1Password
+## 5. Store the key in 1Password
 
 Matches the format the cluster's `ExternalSecret` already expects
 (`kubernetes/apps/networking/headscale-subnet-router/app/externalsecret.yaml`, key
@@ -167,7 +117,7 @@ op item create --category=password --vault=home-ops \
 (Or via the 1Password GUI, same pattern as `docs/runbooks/cloudflare-setup.md` step 1: new
 item → add field → rename its label to `credential` → paste the value.)
 
-## 7. Verify the subnet router picks it up
+## 6. Verify the subnet router picks it up
 
 The `ExternalSecret` refreshes hourly by default — force it rather than waiting:
 
@@ -186,7 +136,7 @@ On the Headscale VM, confirm it registered:
 sudo headscale nodes list
 ```
 
-## 8. Update the advertised route and approve it
+## 7. Update the advertised route and approve it
 
 `TS_ROUTES` in
 [`statefulset.yaml`](../../kubernetes/apps/networking/headscale-subnet-router/app/statefulset.yaml)
@@ -201,7 +151,7 @@ sudo headscale routes list
 sudo headscale routes enable -r <route-id-from-above>
 ```
 
-## 9. Add personal devices to the tailnet
+## 8. Add personal devices to the tailnet
 
 Install the normal Tailscale client (App Store / Play Store / `tailscale` package), then
 point it at this Headscale instance instead of Tailscale's own coordination server:
@@ -219,13 +169,24 @@ subnet router — including the in-cluster Envoy Gateway at
 
 ## Notes
 
-- **Backups**: Headscale's state is just `/var/lib/headscale/db.sqlite` and
-  `/etc/headscale/config.yaml` — no managed backup here yet; `cp` them somewhere durable
-  before any risky change (OS upgrade, Headscale major version bump).
-- **Updates**: `.deb` releases only, no apt repo — repeat the `curl`+`dpkg -i` from step 4
-  with a newer version tag when needed; Renovate doesn't track this since it's outside the
-  GitOps tree.
+- **State file**: `terraform/headscale/terraform.tfstate` is local and gitignored (along
+  with `terraform.tfvars`) — nothing backs it up. Fine for a single-operator personal
+  setup where losing it just means re-importing or recreating the VM; revisit with a
+  remote backend (e.g. an OCI Object Storage bucket) if that stops being true.
+- **Backups**: Headscale's actual data is `/var/lib/headscale/db.sqlite` on the VM (nodes,
+  routes, pre-auth keys) — not reproducible by re-running `tofu apply`, which only manages
+  the surrounding infrastructure, not that file. `cp` it somewhere durable before any risky
+  change (OS upgrade, Headscale major version bump).
+- **Updates**: bump `headscale_version` in `terraform.tfvars` and `tofu apply` — that only
+  affects a *new* instance (cloud-init runs once, on first boot); on an existing VM, update
+  the `.deb` manually the same way cloud-init installed it (`curl` + `dpkg -i`). Renovate
+  doesn't track this version since it's outside the GitOps tree.
 - **Why not run Headscale in-cluster instead**: considered and rejected — it would make
   the VPN path (and therefore remote cluster access) depend on the cluster's own
   availability, defeating the point of having an out-of-band way in when something's
   actually broken.
+- **Why Terraform here but not for secret-zero**: this VM is real infrastructure with a
+  real lifecycle (create, resize, recreate) — the case Terraform is actually built for. A
+  single pre-auth key/token, by contrast, has no lifecycle beyond "exists, gets rotated
+  occasionally" — see `docs/runbooks/secret-zero.md`'s "Why not OpenTofu" section for the
+  full reasoning on why that stays `op inject` + `kubectl apply` instead.

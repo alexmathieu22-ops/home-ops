@@ -4,3 +4,4 @@ flux2 2.9.3
 kubectl 1.36.3
 helm 4.2.3
 helmfile 1.7.2
+opentofu 1.12.5
