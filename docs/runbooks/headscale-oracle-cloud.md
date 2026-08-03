@@ -80,6 +80,12 @@ If it's still failing after a long while, try a different `availability_domain_i
 moment) — though single-AD regions like `ca-montreal-1` don't have that option, so a
 different region may be the only lever left.
 
+**Current state**: `ca-montreal-1` hit zero Ampere A1 capacity across 500+ retries, so
+`instance.tf` is temporarily on `VM.Standard.E2.1.Micro` instead (a separate, uncontended
+Always-Free x86 allowance — 1/8 OCPU / 1GB RAM, fixed, no `shape_config`). It's tight for
+Headscale + Caddy under real load; switch back to `VM.Standard.A1.Flex` (see git history
+for the exact block) once Ampere capacity frees up.
+
 Cloud-init takes a minute or two after the VM boots to install Headscale, install Caddy,
 write both configs, and start both services — `tofu apply` returns before that finishes.
 Confirm it's done:
