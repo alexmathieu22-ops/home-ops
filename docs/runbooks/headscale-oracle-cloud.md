@@ -195,6 +195,45 @@ resolves any tailnet member and the advertised home LAN route is reachable throu
 subnet router — including the in-cluster Envoy Gateway at
 `*.internal.alexandremathieu.com` once DNS for that zone points into the cluster.
 
+## 9. Exit node (route all internet traffic, not just tailnet-peer traffic)
+
+Optional. The Oracle VM also runs a Tailscale *client* (separate from the Headscale
+*server* above) and is set up as an exit node by cloud-init on a fresh VM build — see
+`terraform/headscale/cloud-init.yaml.tftpl`'s Tailscale client section. On an existing VM
+(cloud-init only runs once, on first boot), it's set up the same way manually:
+
+```bash
+ssh ubuntu@$(tofu output -raw public_ip)
+sudo tailscale up --login-server=https://headscale.alexandremathieu.com \
+  --authkey="$(sudo headscale preauthkeys create --user 1 --reusable --expiration 8760h)" \
+  --advertise-exit-node --reset
+```
+
+Exit-node routes (`0.0.0.0/0`, `::/0`) need the same manual approval as any other route:
+
+```bash
+sudo headscale nodes list-routes   # find this node's ID (its hostname is "headscale")
+sudo headscale nodes approve-routes -i <id> -r "0.0.0.0/0,::/0"
+```
+
+Then on a client:
+
+```bash
+tailscale set --exit-node=headscale --exit-node-allow-lan-access
+```
+
+(or Tailscale menu bar → **Exit Node** → `headscale`). Verify with `curl -s
+https://ifconfig.me` — should now show the Oracle VM's IP.
+
+**Worth knowing before relying on this**: `VM.Standard.E2.1.Micro` is capped at 50 Mbps
+internet bandwidth and has a shared/burstable 1/8 OCPU — fine for occasional use (a single
+video stream fits comfortably), but this VM is also running Headscale itself, so heavy or
+sustained use (multiple streams, large downloads) competes with the control-plane
+responsiveness the whole tailnet depends on. Treat it as a light/opportunistic exit node,
+not a daily-driver streaming VPN. Once real hardware + a home subnet router exist, that's
+likely the more valuable exit node to use day-to-day (a home IP, not a elsewhere VPS IP,
+and dedicated resources not shared with anything critical).
+
 ## Notes
 
 - **Oracle's stock image pre-blocks non-SSH ports**: the base Ubuntu image ships
