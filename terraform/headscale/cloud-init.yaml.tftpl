@@ -79,6 +79,7 @@ runcmd:
   - ufw allow 443/tcp
   - ufw allow 80/tcp
   - ufw allow 3478/udp
+  - ufw allow 41641/udp
   - ufw --force enable
 
   # --- Start service ---
@@ -86,3 +87,33 @@ runcmd:
 
   # --- One-time user so the runbook's pre-auth-key step has something to target ---
   - headscale users create home-ops || true
+
+  # --- Wait for Headscale's own HTTP health check before using it below ---
+  - |
+    for i in $(seq 1 30); do
+      curl -sf https://${headscale_fqdn}/health && break
+      sleep 2
+    done
+
+  # --- Tailscale client, so this VM can also act as an exit node (route ALL traffic,
+  # not just tailnet-peer traffic, through it) -- separate from the Headscale *server*
+  # already running above. Not version-pinned like headscale/the subnet-router image:
+  # this is a host package that already tracks Ubuntu's package_upgrade above, unlike
+  # the container images Renovate watches elsewhere in this repo. ---
+  - curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg -o /usr/share/keyrings/tailscale-archive-keyring.gpg
+  - curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.tailscale-keyring.list -o /etc/apt/sources.list.d/tailscale.list
+  - apt-get update
+  - apt-get install -y tailscale
+
+  # Exit nodes must forward traffic between interfaces -- off by default on a bare VM.
+  - |
+    cat > /etc/sysctl.d/99-tailscale.conf <<'EOF'
+    net.ipv4.ip_forward = 1
+    net.ipv6.conf.all.forwarding = 1
+    EOF
+  - sysctl -p /etc/sysctl.d/99-tailscale.conf
+
+  - systemctl enable --now tailscaled
+  # --user 1: the only user on a fresh instance (created by `headscale users create`
+  # above) -- check `headscale users list` if this VM's history ever diverges from that.
+  - tailscale up --login-server=https://${headscale_fqdn} --authkey="$(headscale preauthkeys create --user 1 --reusable --expiration 8760h)" --advertise-exit-node --reset

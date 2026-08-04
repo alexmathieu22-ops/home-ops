@@ -53,7 +53,7 @@ resource "oci_core_security_list" "headscale" {
   }
 
   ingress_security_rules {
-    protocol = "6" # TCP -- Headscale control server, via Caddy
+    protocol = "6" # TCP -- Headscale control server (terminates TLS itself, no proxy)
     source   = "0.0.0.0/0"
     tcp_options {
       min = 443
@@ -67,6 +67,18 @@ resource "oci_core_security_list" "headscale" {
     udp_options {
       min = 3478
       max = 3478
+    }
+  }
+
+  # Tailscale client's default WireGuard port. Not strictly required (falls back to a
+  # random port + DERP relay), but this VM is also an exit node, so a direct path here
+  # matters for latency.
+  ingress_security_rules {
+    protocol = "17" # UDP
+    source   = "0.0.0.0/0"
+    udp_options {
+      min = 41641
+      max = 41641
     }
   }
 }
