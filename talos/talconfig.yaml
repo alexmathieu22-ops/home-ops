@@ -53,6 +53,23 @@ controlPlane:
         sysctls:
           net.core.rmem_max: "67108864"
           net.core.wmem_max: "67108864"
+    # Required for local-path-provisioner PVCs to mount: repoints the provisioner's data
+    # path at /var (Talos's root filesystem is read-only, only /var persists), and tells
+    # the kubelet to bind-mount that path into pods -- without this, PVCs report a
+    # healthy StorageClass but fail to actually mount. Re-apply machine config after this
+    # changes (`talhelper gencommand apply` / `talosctl apply-config`) -- Flux can't push
+    # this.
+    - |-
+      machine:
+        kubelet:
+          extraMounts:
+            - destination: /var/local-path-provisioner
+              type: bind
+              source: /var/local-path-provisioner
+              options:
+                - bind
+                - rshared
+                - rw
 
 nodes:
   # HP ProDesk 600 G4 Mini. Real LAN is 192.168.18.0/24 (confirmed from the node's own

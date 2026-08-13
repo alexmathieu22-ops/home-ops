@@ -14,7 +14,7 @@ self-hosted Headscale.
 | Public exposure  | [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) (cloudflared) |
 | VPN              | Self-hosted [Headscale](https://headscale.net/) + Tailscale subnet router |
 | Secrets          | [1Password Service Account](https://developer.1password.com/docs/service-accounts/) via [External Secrets Operator](https://external-secrets.io/) (`1password-sdk` provider) — zero SOPS |
-| Storage          | [Rook-Ceph](https://rook.io/)                                |
+| Storage          | [Rook-Ceph](https://rook.io/) (planned; 0 usable OSDs on current hardware) + [local-path-provisioner](https://github.com/rancher/local-path-provisioner) (interim, node-local, cluster default `StorageClass` for now) |
 | Ingress          | [Envoy Gateway](https://gateway.envoyproxy.io/) (Gateway API) — `internal` Gateway (VPN/tailnet only) + `external` Gateway (public, behind cloudflared) |
 | Observability    | [Gatus](https://github.com/TwiN/gatus) (status page) + metrics-server (`kubectl top`/k9s) |
 | LAN DNS          | [AdGuard Home](https://adguard.com/adguard-home/) — resolves `*.internal.alexandremathieu.com` (the ISP router can't do local DNS records) |
@@ -45,7 +45,8 @@ home-ops/
 ├── kubernetes/
 │   ├── flux/cluster/           # Flux's own bootstrap manifests + the one top-level sync
 │   └── apps/                   # one tree grouped by K8s namespace (onedr0p/buroa convention):
-│                                # kube-system (cilium), cert-manager, external-secrets,
+│                                # kube-system (cilium, metrics-server, local-path-provisioner),
+│                                # cert-manager, external-secrets,
 │                                # rook-ceph, networking (envoy-gateway, cloudflared,
 │                                # headscale-subnet-router, gateway-api-crds), observability
 │                                # (gatus), default (home apps)

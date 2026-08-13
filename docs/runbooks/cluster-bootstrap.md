@@ -286,6 +286,14 @@ this cluster too.
   Rook-Ceph's `Kustomization` unreconciled until you add a second disk (the box's second,
   empty M.2 slot is the cleanest option — see HARDWARE_PLAN.md), or accept it staying
   unhealthy for now — it won't block anything else in the dependency chain.
+  **Interim answer for anything that needs a PVC right now:**
+  `kubernetes/apps/kube-system/local-path-provisioner` — node-local hostPath storage
+  (single replica, no HA/snapshots), set as the cluster default `StorageClass`
+  (`local-path`) until Rook-Ceph has real OSDs. Needs the
+  `machine.kubelet.extraMounts` patch in `talos/talconfig.yaml` applied to the node
+  (`talhelper gencommand apply`) — it's a machine config change, Flux can't push it. Not
+  a replacement for the Rook-Ceph decision in `PROJECT_BRIEF.md` — swap PVCs back to
+  `ceph-block` once real OSDs exist.
 - **8GB RAM is tight.** Watch for OOM/crash-looping controllers once Cilium,
   cert-manager, external-secrets, and observability are all running together. The
   ProDesk 600 G4 Mini takes 2x DDR4 SODIMM up to 32GB; a RAM upgrade is a cheap,
