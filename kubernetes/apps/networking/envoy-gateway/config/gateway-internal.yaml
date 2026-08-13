@@ -1,11 +1,4 @@
-# Internal/VPN-only ingress — reachable via the Headscale subnet router, never exposed
-# publicly (that's cloudflared's job). Envoy Gateway provisions a LoadBalancer Service
-# for this; Cilium LB-IPAM (kubernetes/apps/kube-system/cilium/config/ippool.yaml) assigns it an
-# IP from the internal pool automatically.
-#
-# Matches the ClusterIssuer's DNS zone in
-# kubernetes/apps/cert-manager/cert-manager/config/clusterissuer.yaml. Still won't
-# actually issue a cert until the Cloudflare API token exists (deferred).
+# Internal/VPN-only ingress, LoadBalancer IP via Cilium LB-IPAM.
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:

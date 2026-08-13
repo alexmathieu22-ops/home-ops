@@ -78,10 +78,27 @@ kubectl annotate externalsecret -n <namespace> <name> force-sync=$(date +%s) --o
 kubectl rollout restart deployment -n networking cloudflared   # if it's cloudflared specifically
 ```
 
-## 4. Public hostname routing (once an app actually exists)
+## 4. Public hostname routing — one-time, not per-app
+
+Matches onedr0p/cluster-template's actual pattern (confirmed against its docs, not
+assumed): cloudflared doesn't point at each app's Service individually. It has ONE
+wildcard entry pointing at the `external` Envoy Gateway
+(`kubernetes/apps/networking/envoy-gateway/config/gateway-external.yaml`) — every public
+app after this is just an `HTTPRoute` committed to git, no dashboard step required.
 
 Zero Trust dashboard → **Networks** → **Tunnels** → `home-ops` → **Public Hostname** tab →
-add an entry mapping `whatever.yourdomain.com` → the internal Kubernetes Service (e.g.
-`http://immich.default.svc.cluster.local:2283`). This is what "routes by hostname, not DNS
-records pointing at an IP" means — no `config.yml`/ingress ConfigMap needed in this repo.
-Nothing to do here until an app is deployed.
+add ONE entry:
+
+- Hostname: `*.alexandremathieu.com`
+- Service: `http://<external Gateway's Service>.networking.svc.cluster.local` — the exact
+  auto-generated Service name isn't predictable ahead of time; find it with:
+  ```bash
+  kubectl get svc -n networking -l gateway.envoyproxy.io/owning-gateway-name=external
+  ```
+
+This is still a one-time manual step (not committed to git — that's inherent to how
+Cloudflare Tunnel's remote-managed ingress works, this repo isn't using the
+fully-local-config alternative), but it's the *only* one now — do it once, then every new
+public app is `kubernetes/apps/<namespace>/<app>/app/httproute.yaml` +
+`hostnames: ["whatever.alexandremathieu.com"]`, same as internal apps already work
+against the `internal` Gateway.
