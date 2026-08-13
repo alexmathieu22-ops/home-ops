@@ -1,11 +1,12 @@
 # bjw-s app-template, not a community chart (Rancher doesn't publish one -- see
 # rancher/local-path-provisioner#89) -- see IMPLEMENTATION_NOTES.md ("Storage") for the
-# interim-storage rationale. RBAC/ConfigMap/StorageClass are hand-written below as
-# extraObjects, matching upstream's own raw deploy manifest 1:1
+# interim-storage rationale. RBAC/ConfigMap/StorageClass are hand-written below using
+# app-template 5.x's rbac/rawResources keys (NOT extraObjects -- that key doesn't exist in
+# this chart version and silently no-ops), matching upstream's own raw deploy manifest 1:1
 # (rancher/local-path-provisioner deploy/local-path-storage.yaml) rather than any
-# third-party packaging of it. NOT YET LIVE-VERIFIED -- confirm the provisioner actually
-# binds PVCs after first reconcile (`kubectl get pods -n kube-system`,
-# `kubectl get storageclass`).
+# third-party packaging of it. defaultPodOptions.automountServiceAccountToken must be set
+# true -- app-template defaults it to false, which breaks in-cluster auth for controllers
+# like this one that talk to the API server.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -24,6 +25,8 @@ spec:
       retries: 3
   values:
     fullnameOverride: local-path-provisioner
+    defaultPodOptions:
+      automountServiceAccountToken: true
     controllers:
       main:
         containers:
@@ -96,65 +99,59 @@ spec:
     # Cluster-scoped RBAC (PV/StorageClass/node watch) + namespaced RBAC (helper pod
     # lifecycle) + the StorageClass itself -- app-template's default ServiceAccount
     # (named "local-path-provisioner" via fullnameOverride above) is the subject for both
-    # bindings.
-    extraObjects:
-      - apiVersion: rbac.authorization.k8s.io/v1
-        kind: ClusterRole
-        metadata:
-          name: local-path-provisioner
-        rules:
-          - apiGroups: [""]
-            resources: ["nodes", "persistentvolumeclaims", "configmaps", "pods", "pods/log"]
-            verbs: ["get", "list", "watch"]
-          - apiGroups: [""]
-            resources: ["persistentvolumes"]
-            verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
-          - apiGroups: [""]
-            resources: ["events"]
-            verbs: ["create", "patch"]
-          - apiGroups: ["storage.k8s.io"]
-            resources: ["storageclasses"]
-            verbs: ["get", "list", "watch"]
-      - apiVersion: rbac.authorization.k8s.io/v1
-        kind: ClusterRoleBinding
-        metadata:
-          name: local-path-provisioner
-        subjects:
-          - kind: ServiceAccount
-            name: local-path-provisioner
-            namespace: kube-system
-        roleRef:
-          kind: ClusterRole
-          name: local-path-provisioner
-          apiGroup: rbac.authorization.k8s.io
-      - apiVersion: rbac.authorization.k8s.io/v1
-        kind: Role
-        metadata:
-          name: local-path-provisioner
-          namespace: kube-system
-        rules:
-          - apiGroups: [""]
-            resources: ["pods"]
-            verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
-      - apiVersion: rbac.authorization.k8s.io/v1
-        kind: RoleBinding
-        metadata:
-          name: local-path-provisioner
-          namespace: kube-system
-        subjects:
-          - kind: ServiceAccount
-            name: local-path-provisioner
-            namespace: kube-system
-        roleRef:
-          kind: Role
-          name: local-path-provisioner
-          apiGroup: rbac.authorization.k8s.io
-      - apiVersion: storage.k8s.io/v1
-        kind: StorageClass
-        metadata:
-          name: local-path
-          annotations:
-            storageclass.kubernetes.io/is-default-class: "true"
-        provisioner: rancher.io/local-path
-        reclaimPolicy: Delete
-        volumeBindingMode: WaitForFirstConsumer
+    # bindings, referenced by name/namespace rather than by "identifier" since it's created
+    # implicitly (no serviceAccount: block below).
+    rbac:
+      roles:
+        local-path-provisioner:
+          type: ClusterRole
+          rules:
+            - apiGroups: [""]
+              resources: ["nodes", "persistentvolumeclaims", "configmaps", "pods", "pods/log"]
+              verbs: ["get", "list", "watch"]
+            - apiGroups: [""]
+              resources: ["persistentvolumes"]
+              verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+            - apiGroups: [""]
+              resources: ["events"]
+              verbs: ["create", "patch"]
+            - apiGroups: ["storage.k8s.io"]
+              resources: ["storageclasses"]
+              verbs: ["get", "list", "watch"]
+        local-path-provisioner-pods:
+          type: Role
+          rules:
+            - apiGroups: [""]
+              resources: ["pods"]
+              verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+      bindings:
+        local-path-provisioner:
+          type: ClusterRoleBinding
+          roleRef:
+            identifier: local-path-provisioner
+          subjects:
+            - name: local-path-provisioner
+              kind: ServiceAccount
+              namespace: kube-system
+        local-path-provisioner-pods:
+          type: RoleBinding
+          roleRef:
+            identifier: local-path-provisioner-pods
+          subjects:
+            - name: local-path-provisioner
+              kind: ServiceAccount
+              namespace: kube-system
+    # forceRename is required: rawResources ignores manifest.metadata.name and derives the
+    # object name from fullnameOverride unless forced.
+    rawResources:
+      storageclass:
+        forceRename: local-path
+        manifest:
+          apiVersion: storage.k8s.io/v1
+          kind: StorageClass
+          metadata:
+            annotations:
+              storageclass.kubernetes.io/is-default-class: "true"
+          provisioner: rancher.io/local-path
+          reclaimPolicy: Delete
+          volumeBindingMode: WaitForFirstConsumer
