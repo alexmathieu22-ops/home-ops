@@ -16,7 +16,7 @@ self-hosted Headscale.
 | Secrets          | [1Password Service Account](https://developer.1password.com/docs/service-accounts/) via [External Secrets Operator](https://external-secrets.io/) (`1password-sdk` provider) — zero SOPS |
 | Storage          | [Rook-Ceph](https://rook.io/)                                |
 | Ingress          | [Envoy Gateway](https://gateway.envoyproxy.io/) (Gateway API) |
-| Observability    | kube-prometheus-stack + Loki                                |
+| Observability    | [Gatus](https://github.com/TwiN/gatus) (status page) + metrics-server (`kubectl top`/k9s) |
 | Dependency mgmt  | [Renovate](https://docs.renovatebot.com/)                   |
 | Tool versions    | [asdf](https://asdf-vm.com/)                                 |
 | VPN host provisioning | [OpenTofu](https://opentofu.org/) (Oracle Cloud VM + DNS only, see below) |
@@ -47,7 +47,7 @@ home-ops/
 │                                # kube-system (cilium), cert-manager, external-secrets,
 │                                # rook-ceph, networking (envoy-gateway, cloudflared,
 │                                # headscale-subnet-router, gateway-api-crds), observability
-│                                # (kube-prometheus-stack, loki, alloy), default (home apps)
+│                                # (gatus), default (home apps)
 │                                # -- each component as <name>/{ks.yaml, app/, config/}
 ├── .github/workflows/          # Renovate, CI (kubeconform validation)
 └── docs/runbooks/              # the handful of manual, non-GitOps steps

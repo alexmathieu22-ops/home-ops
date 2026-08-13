@@ -15,7 +15,7 @@ Talos Kubernetes cluster (3 nodes, bare metal)
 ├── Rook-Ceph            (in-cluster PVCs) + NAS (bulk media, NFS)
 ├── Envoy Gateway        (Gateway API implementation, internal/VPN-only ingress)
 ├── Headscale subnet router (advertises home LAN CIDR into the tailnet)
-├── kube-prometheus-stack + Loki (observability)
+├── Gatus (observability -- status page; metrics-server for kubectl top/k9s)
 ├── Flux CD              (GitOps reconciler — the thing that owns everything above)
 └── apps/ (Immich, Home Assistant, Jellyfin, Paperless-ngx, ...)
 ```
@@ -134,9 +134,7 @@ home-ops/
 │       │   ├── headscale-subnet-router/   # NOT the Tailscale Operator — incompatible with Headscale
 │       │   └── gateway-api-crds/
 │       ├── observability/
-│       │   ├── kube-prometheus-stack/
-│       │   ├── loki/
-│       │   └── alloy/
+│       │   └── gatus/
 │       └── default/             # immich, home-assistant, jellyfin, paperless-ngx, homepage
 │                                 # (not yet scaffolded -- empty until storage/secrets/ingress
 │                                 # infra is live)
@@ -274,9 +272,14 @@ declared in each component's own `ks.yaml`):
 
 ## Phase 7 — Observability
 
-`kube-prometheus-stack` (Prometheus + Grafana + Alertmanager) + Loki (or Grafana Alloy) as
-HelmReleases under `infrastructure/monitoring/`. Do this **before** Phase 8 — debugging app
-rollouts without metrics/logs is the single biggest time-sink in homelabs.
+Deliberately lightweight for now: Gatus (status page) under `kubernetes/apps/observability/`
+plus `metrics-server` under `kubernetes/apps/kube-system/` for `kubectl top`/k9s. The original
+plan here was `kube-prometheus-stack` + Loki (still what onedr0p/buroa actually run), but both
+of those target multi-node clusters with real RAM headroom -- on one 8GB node it was competing
+with Cilium/cert-manager/external-secrets/apps for the same tight budget. Revisit once node 2
+exists, or evaluate Grafana Cloud's free tier as a no-local-cost alternative. Do this **before**
+Phase 8 regardless — debugging app rollouts with zero visibility is the single biggest
+time-sink in homelabs, even with just a status page.
 
 ---
 
