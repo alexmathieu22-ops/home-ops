@@ -1,7 +1,5 @@
-# Public route to source-controller's webhook-receiver Service (a separate Service from
-# notification-controller's own -- see gotk-components.yaml -- targeting the dedicated
-# http-webhook port). Reachable once cloudflared's tunnel is live (docs/runbooks/
-# cloudflare-setup.md); the HTTPRoute itself has no dependency on that being done.
+# webhook-receiver is a separate Service from notification-controller's own (see
+# gotk-components.yaml) -- it targets the dedicated http-webhook port.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:

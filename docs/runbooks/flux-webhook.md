@@ -8,8 +8,7 @@ even that wait). Manifests already committed:
 
 Requires the [cloudflared tunnel](cloudflare-setup.md) to be live — GitHub's servers need
 to reach the cluster over the public internet, and this repo has no other public ingress
-path. Until then, Flux just keeps polling every minute; nothing breaks by setting up the
-token/webhook early, it simply won't fire until the tunnel is.
+path.
 
 ## 1. Generate the shared secret
 

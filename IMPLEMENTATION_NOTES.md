@@ -166,8 +166,7 @@ the workload that needs them.
 sourced from it reconciles right after. Routed through the same `external` Gateway +
 cloudflared tunnel as any other public app (`webhook-receiver`, a separate Service from
 notification-controller's own — see `gotk-components.yaml` — on its dedicated
-`http-webhook` port), so it's dead until that tunnel exists; setup is otherwise independent
-and can be done early. Manual GitHub-side step (token generation, webhook creation) is
+`http-webhook` port). Manual GitHub-side step (token generation, webhook creation) is
 `docs/runbooks/flux-webhook.md`, same shape as `cloudflare-setup.md`'s public-hostname step.
 
 ## Secrets: 1Password SDK provider

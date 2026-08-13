@@ -1,7 +1,5 @@
-# Matches onedr0p/buroa's push-to-reconcile pattern: GitHub calls this instead of Flux
-# waiting out the GitRepository's 1m poll interval. Only the GitRepository needs listing
-# here -- kustomize-controller already watches it for revision changes, so every
-# Kustomization sourced from it (flux-system, apps, ...) reconciles shortly after,
+# Only the GitRepository needs listing here -- kustomize-controller already watches it for
+# revision changes, so every Kustomization sourced from it reconciles shortly after,
 # without being listed individually.
 apiVersion: notification.toolkit.fluxcd.io/v1
 kind: Receiver
