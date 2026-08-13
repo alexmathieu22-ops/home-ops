@@ -1,0 +1,51 @@
+# Deliberately lightweight, replacing the kube-prometheus-stack + Loki + Alloy plan (see
+# git history / PROJECT_BRIEF.md) -- that stack is what onedr0p/buroa actually run, but
+# both target multi-node clusters with real RAM headroom; on this single 8GB node it was
+# competing with Cilium/cert-manager/external-secrets/apps for the same tight budget.
+# Gatus alone covers "is everything up" (a status page you can glance at) without that
+# cost. Whether to add real metrics/logs later (self-hosted stack once node 2 exists, or
+# Grafana Cloud's free tier instead) is still an open decision -- not made here.
+#
+# persistence.enabled: false on purpose, not an oversight: Rook-Ceph currently has zero
+# usable OSDs on this hardware (see kubernetes/apps/rook-ceph's caveat), so a PVC-backed
+# config would just sit unreconciled. Uptime history resets on pod restart until storage
+# exists -- acceptable for a "is it up right now" status page. Flip this on once
+# ceph-block is actually available.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: gatus
+  namespace: observability
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: gatus
+      version: "1.x"
+      sourceRef:
+        kind: HelmRepository
+        name: twin
+      interval: 1h
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    persistence:
+      enabled: false
+    config:
+      endpoints:
+        # Placeholder self-check so the deployment isn't monitoring nothing -- replace/add
+        # to this list as real apps and internal services come online.
+        - name: kubernetes-api
+          group: internal
+          url: https://kubernetes.default.svc.cluster.local
+          interval: 60s
+          client:
+            insecure: true
+          conditions:
+            - "[STATUS] == 200"
+            - "[STATUS] == 401"
+            - "[STATUS] == 403"

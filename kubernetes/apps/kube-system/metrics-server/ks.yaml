@@ -1,7 +1,7 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: alloy
+  name: metrics-server
   namespace: flux-system
 spec:
   interval: 1h
@@ -9,10 +9,10 @@ spec:
   retryInterval: 2m
   prune: true
   wait: true
-  targetNamespace: observability
+  targetNamespace: kube-system
   dependsOn:
-    - name: loki
+    - name: cilium
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./kubernetes/apps/observability/alloy/app
+  path: ./kubernetes/apps/kube-system/metrics-server/app

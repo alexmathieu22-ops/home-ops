@@ -81,7 +81,9 @@ home-ops/
 │       ├── rook-ceph/
 │       ├── networking/            # envoy-gateway, cloudflared, headscale-subnet-router,
 │       │                          # gateway-api-crds
-│       ├── observability/         # kube-prometheus-stack, loki, alloy
+│       ├── observability/         # gatus (status page only for now -- kube-prometheus-stack +
+│       │                          # Loki was too heavy for one 8GB node, see git history;
+│       │                          # metrics-server lives under kube-system instead)
 │       └── default/               # empty scaffolding for now: immich, home-assistant,
 │                                   # jellyfin, paperless-ngx, homepage
 ├── .github/workflows/           # Renovate config, CI validation (kubeconform)
@@ -103,7 +105,7 @@ home-ops/
 6. Infrastructure HelmReleases in order: Cilium (with LB-IPAM/L2) → cert-manager →
    external-secrets → cloudflared → Rook-Ceph → Envoy Gateway
 7. Headscale subnet router manifests (mark Headscale server hosting as pending/deferred)
-8. kube-prometheus-stack + Loki
+8. Gatus (status page) + metrics-server
 9. Empty app scaffolds for the apps listed above, ready to fill in once storage/DNS/secrets
    are live
 10. Renovate config + a basic CI workflow (kubeconform validation on PR)
