@@ -1,6 +1,4 @@
-# ./config's ExternalSecret needs the ExternalSecret CRD (from external-secrets, a
-# separate component installed after cert-manager per PROJECT_BRIEF.md's order) --
-# split so cert-manager-config can dependsOn both.
+# Two Kustomizations (CRD/CR race) -- see IMPLEMENTATION_NOTES.md.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -20,12 +18,6 @@ spec:
     name: flux-system
   path: ./kubernetes/apps/cert-manager/cert-manager/app
 ---
-# wait: true (matching onedr0p/home-ops and buroa/k8s-gitops's actual convention) is
-# correct here, not a problem to route around: this ExternalSecret and the ClusterIssuer
-# it feeds both genuinely can't go healthy until 1Password/Cloudflare exist
-# (PROJECT_BRIEF.md "Deferred"), so staying not-Ready is an accurate signal, not a false
-# green. healthCheckExprs (same pattern as the reference repos) checks the ClusterIssuer's
-# real Ready condition explicitly rather than relying on Flux's generic auto-detection.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -45,8 +37,6 @@ spec:
       current: status.conditions.filter(e, e.type == 'Ready').all(e, e.status == 'True')
   dependsOn:
     - name: cert-manager
-    # external-secrets-config (not just external-secrets) -- this ExternalSecret
-    # needs the ClusterSecretStore object to actually exist, not just its CRD.
     - name: external-secrets-config
   sourceRef:
     kind: GitRepository

@@ -1,6 +1,5 @@
-# The operator only -- CephCluster/pools/StorageClass are the rook-ceph-cluster chart,
-# one level down (../cluster), which needs the CephCluster CRD this installs. Split for
-# the same CRD/CR-race reason as cilium/cilium-config.
+# Operator only -- CephCluster/pools/StorageClass are the rook-ceph-cluster chart, one
+# level down (../cluster). Split for the CRD/CR-race reason in IMPLEMENTATION_NOTES.md.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -20,10 +19,6 @@ spec:
   values:
     csi:
       serviceMonitor:
-        # No Prometheus Operator CRDs at this point in the dependency chain
-        # (monitoring depends on storage, not the other way around) -- see
-        # kubernetes/apps/rook-ceph/rook-ceph/cluster/helmrelease.yaml for the same
-        # reasoning applied to the cluster chart.
         enabled: false
     monitoring:
       enabled: false

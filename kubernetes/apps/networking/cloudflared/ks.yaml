@@ -1,6 +1,4 @@
-# wait: true (matching onedr0p/home-ops and buroa/k8s-gitops's convention): this
-# ExternalSecret genuinely can't succeed until 1Password/Cloudflare exist
-# (PROJECT_BRIEF.md "Deferred"), so staying not-Ready is accurate, not a false green.
+# Stays not-Ready until 1Password/Cloudflare exist (PROJECT_BRIEF.md "Deferred") -- accurate, not a bug.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:

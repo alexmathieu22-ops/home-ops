@@ -31,12 +31,7 @@ spec:
   targetNamespace: rook-ceph
   dependsOn:
     - name: rook-ceph
-  # Deliberately not gating on CephCluster reaching HEALTH_OK/HEALTH_WARN here (unlike
-  # some upstream examples): the local dev cluster has no raw block devices and never
-  # will, and the real-hardware disk topology is an open question (see the caveat in
-  # ./cluster/helmrelease.yaml) -- a hard health gate would block every downstream
-  # Kustomization indefinitely in both cases. `wait: true` still waits for the
-  # HelmRelease itself to install successfully.
+  # Not gated on CephCluster health (zero usable OSDs currently) -- see IMPLEMENTATION_NOTES.md.
   sourceRef:
     kind: GitRepository
     name: flux-system

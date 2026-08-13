@@ -1,7 +1,6 @@
-# Not the Tailscale Kubernetes Operator — incompatible with self-hosted Headscale, which
-# only implements Tailscale's v1 API (see juanfont/headscale#3081, #3086). This is a plain
-# tailscale client advertising the home LAN CIDR into the tailnet. StatefulSet (not
-# Deployment) so it keeps a stable node identity/state across restarts via its PVC.
+# Plain Tailscale client, not the Tailscale Kubernetes Operator (incompatible with
+# self-hosted Headscale) -- see IMPLEMENTATION_NOTES.md ("Networking") for this and the
+# TS_KUBE_SECRET/TS_LOGIN_SERVER/advertise-tags gotchas below.
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -27,32 +26,17 @@ spec:
                 secretKeyRef:
                   name: headscale-subnet-router-authkey
                   key: authkey
-            # Real home LAN CIDR, confirmed from the first node's console during install.
             - name: TS_ROUTES
               value: "192.168.18.0/24"
             - name: TS_USERSPACE
               value: "false"
             - name: TS_STATE_DIR
               value: /var/lib/tailscale
-            # TS_KUBE_SECRET defaults to "tailscale" and takes precedence over
-            # TS_STATE_DIR when running on Kubernetes -- disable it so state goes only to
-            # the PVC above, avoiding needing RBAC for a Secret this Pod would otherwise
-            # try to read/write.
             - name: TS_KUBE_SECRET
               value: ""
             - name: TS_ACCEPT_DNS
               value: "false"
-            # TS_LOGIN_SERVER is NOT a real containerboot env var (confirmed against
-            # current cmd/containerboot source -- it's silently ignored, which is why this
-            # was connecting to Tailscale's own coordination server instead of Headscale).
-            # --login-server is a flag to `tailscale up`, passed via TS_EXTRA_ARGS instead.
-            # Headscale runs on an Oracle Cloud VM, provisioned via terraform/headscale
-            # (see docs/runbooks/headscale-oracle-cloud.md).
-            #
-            # No --advertise-tags: Headscale rejects any tag that isn't pre-declared as
-            # owned in an ACL policy ("requested tags [...] are invalid or not permitted"),
-            # and no ACL policy is configured yet -- add one and reintroduce a tag if
-            # tag-based ACLs are ever needed.
+            # --login-server via TS_EXTRA_ARGS, not TS_LOGIN_SERVER -- see IMPLEMENTATION_NOTES.md.
             - name: TS_EXTRA_ARGS
               value: --login-server=https://headscale.alexandremathieu.com
           securityContext:
