@@ -1,7 +1,5 @@
-# bjw-s app-template, matching the pattern used for local-path-provisioner/gatus in this
-# repo and mirroring onedr0p/home-ops's cloudflare-tunnel HelmRelease. TUNNEL_METRICS/
-# --metrics must bind the same port the liveness probe checks -- cloudflared doesn't listen
-# anywhere by default, which is what silently crashlooped the previous raw Deployment.
+# TUNNEL_METRICS/--metrics must bind the same port the liveness probe checks --
+# cloudflared doesn't listen anywhere by default.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
