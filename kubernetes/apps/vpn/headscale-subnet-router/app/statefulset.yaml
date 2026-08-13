@@ -27,9 +27,9 @@ spec:
                 secretKeyRef:
                   name: headscale-subnet-router-authkey
                   key: authkey
-            # TODO: replace with the real home LAN CIDR once hardware/networking exist.
+            # Real home LAN CIDR, confirmed from the first node's console during install.
             - name: TS_ROUTES
-              value: "192.168.1.0/24"
+              value: "192.168.18.0/24"
             - name: TS_USERSPACE
               value: "false"
             - name: TS_STATE_DIR

@@ -1,0 +1,16 @@
+# SOPS creation rules — scoped narrowly to Talos's own cluster secrets (talsecret.yaml),
+# not a general secrets-management system. App/household secrets still flow through
+# 1Password + External Secrets Operator (see PROJECT_BRIEF.md's "Zero SOPS" decision) --
+# that's unchanged. This is a deliberate, narrow exception: Talos secrets have to exist
+# *before* the cluster (and therefore ESO) does, so ESO can't cover them. Matches
+# onedr0p/cluster-template's approach (age key + SOPS, committed encrypted) rather than
+# keeping the only copy of the cluster's PKI on one laptop with no way to recover it if
+# that laptop is lost.
+#
+# Age private key lives at ~/Library/Application Support/sops/age/keys.txt (macOS
+# default SOPS looks up automatically) -- back it up somewhere durable (1Password
+# recommended, matching the rest of this repo's secrets tooling) since it's the one
+# thing that can't be regenerated or recovered from Git if lost.
+creation_rules:
+  - path_regex: talos/talsecret\.yaml$
+    age: age1894ftfjfrczxshgaxkkzgqpchgrcuj7t929u23nxqnpva9jtpfgqru6g88

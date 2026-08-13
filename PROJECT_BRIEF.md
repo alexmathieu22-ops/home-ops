@@ -23,14 +23,20 @@ flag it before deviating.
 | **Headscale** (self-hosted control server) for VPN                                   | Tailscale SaaS                               | User wants zero recurring subscriptions; host on Oracle Cloud "Always Free" tier ARM VM (genuinely free forever) or self-hosted at home if a real public IPv4 is confirmed available                                                       |
 | Headscale **subnet router** for LAN access                                           | Tailscale Kubernetes Operator                | **Operator is incompatible with Headscale** — it requires Tailscale's v2 API/OAuth; Headscale only implements v1 (see juanfont/headscale#3081, #3086). This is not a preference, it's a hard incompatibility. Do not attempt the Operator. |
 | **1Password Service Account + External Secrets Operator's `1password-sdk` provider** | 1Password Connect server, Vaultwarden        | Lighter weight, no extra server to run. User does not want Vaultwarden since 1Password already covers household password management.                                                                                                       |
-| **Zero SOPS** for secrets, except none at all if avoidable                           | SOPS+age for general secrets                 | "Secret zero" (the 1Password Service Account token) is pushed into the cluster via a one-time `op inject \| kubectl apply` from an authenticated local `op` CLI session — not committed to Git, not SOPS-encrypted. (Amended from the original OpenTofu plan: same one-time/not-committed guarantee, no state file. See `docs/runbooks/secret-zero.md`.)                                      |
+| **Zero SOPS** for secrets, except none at all if avoidable                           | SOPS+age for general secrets                 | "Secret zero" (the 1Password Service Account token) is pushed into the cluster via a one-time `op inject \| kubectl apply` from an authenticated local `op` CLI session — not committed to Git, not SOPS-encrypted. (Amended from the original OpenTofu plan: same one-time/not-committed guarantee, no state file. See `docs/runbooks/secret-zero.md`.) One narrow, deliberate exception: `talos/talsecret.yaml` (Talos's own cluster PKI/secrets) is SOPS+age-encrypted and committed as `talsecret.sops.yaml` (see `.sops.yaml`), because it has to exist *before* the cluster — and therefore ESO — does, so the 1Password+ESO path can't cover it. Every other secret in this repo still goes through 1Password + ESO, unchanged.                                      |
 | **Rook-Ceph** for in-cluster storage                                                 | Longhorn                                     | Amended from the original Longhorn decision: most widely used in comparable reference repos (onedr0p/home-ops, buroa/k8s-gitops). Needs a dedicated raw block device per node — flagged in `HARDWARE_PLAN.md` as unbudgeted.               |
 | Renovate for dependency updates                                                      | Manual version bumps                         | "Fully as code" requirement — every update should be a mergeable PR                                                                                                                                                                        |
 
 ## Hardware context (informs manifests but doesn't block software work)
 
-- Target: 3× Beelink EQ12 Pro (Intel N100, 16GB RAM, 500GB NVMe) — not yet purchased.
-- Until hardware arrives: **develop against a local Talos cluster** via
+- Current: a single HP ProDesk 600 G4 Mini (i5-8500T, 6C/6T, 8GB RAM, 256GB SSD), running
+  standalone. `talos/talconfig.yaml`'s `nodes:` block reflects this one real node — see
+  `docs/runbooks/cluster-bootstrap.md` for the bare-metal bring-up steps and
+  `HARDWARE_PLAN.md` for the RAM/storage caveats this creates (no spare disk for
+  Rook-Ceph OSDs yet, 8GB RAM on the low side). Additional nodes aren't required to match
+  this box, but see `HARDWARE_PLAN.md`'s "3 identical nodes" rationale if buying more.
+- Also useful as disposable dev/staging even with real hardware up:
+  **develop against a local Talos cluster** via
   `talosctl cluster create docker --name home-ops-dev --workers 0` (single control-plane;
   the QEMU provisioner that would give the real 3-CP topology hits a kexec hang on
   macOS/Apple Silicon — see `docs/runbooks/cluster-bootstrap.md`). This is real Talos +
@@ -47,7 +53,6 @@ flag it before deviating.
 - 1Password account + vault + Service Account creation — not done yet
 - Cloudflare account + domain — not done yet
 - Where Headscale will run (Oracle Free Tier vs. home) — pending an ISP CGNAT check
-- Actual hardware purchase
 
 Where these are required (e.g. `terraform/bootstrap`, cert-manager's Cloudflare API token,
 the Headscale server itself), scaffold the code/manifests fully but leave clearly marked

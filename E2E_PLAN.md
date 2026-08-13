@@ -152,7 +152,7 @@ home-ops/
 1. Flash Talos ISO to USB (or PXE-boot it — nicer long-term, more setup now) for each node.
 2. Boot all 3 nodes, discover them on the LAN:
    ```bash
-   nmap -Pn -n -p 50000 192.168.1.0/24 -vv | grep Discovered
+   nmap -Pn -n -p 50000 192.168.18.0/24 -vv | grep Discovered
    ```
 3. Write `talos/talconfig.yaml` (talhelper) describing your 3 nodes: static IPs, disk to
    install to, control-plane vs worker role (all 3 as control-plane is fine at this scale —

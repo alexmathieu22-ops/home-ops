@@ -1,9 +1,12 @@
-# Talos / talhelper generated secrets & configs — never commit real cluster credentials
+# Talos / talhelper generated secrets & configs — regenerable from talsecret.sops.yaml +
+# talconfig.yaml via `talhelper genconfig`, so not committed. talsecret.sops.yaml (the
+# SOPS/age-encrypted seed) is NOT ignored — that one IS committed, see .sops.yaml and
+# docs/runbooks/cluster-bootstrap.md.
 talos/clusterconfig/*
 !talos/clusterconfig/.gitkeep
-talos/talsecret.sops.yaml
 kubeconfig
 talosconfig
+talos/talsecret.yaml
 
 # OpenTofu
 terraform/**/.terraform/

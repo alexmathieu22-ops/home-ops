@@ -1,11 +1,13 @@
-# PLACEHOLDER RANGE — hardware/LAN not provisioned yet (PROJECT_BRIEF.md "Deferred").
-# Update to a small, unused slice of the real LAN subnet once the 3x Beelink nodes are
-# on the network, e.g. the last ~20 addresses of the home /24.
+# Real LAN confirmed as 192.168.18.0/24 (from the node's console during install, not the
+# 192.168.1.0/24 earlier placeholders assumed). This range sits outside the node's
+# reserved IP (talos/talconfig.yaml: 192.168.18.39) on purpose -- double check it doesn't
+# overlap your router's DHCP pool before relying on it (the node's .39 came from that
+# pool, so the pool likely extends at least that far).
 apiVersion: cilium.io/v2alpha1
 kind: CiliumLoadBalancerIPPool
 metadata:
   name: internal
 spec:
   blocks:
-    - start: "192.168.1.200"
-      stop: "192.168.1.220"
+    - start: "192.168.18.200"
+      stop: "192.168.18.220"

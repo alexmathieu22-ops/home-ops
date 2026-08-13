@@ -29,7 +29,9 @@ See [PROJECT_BRIEF.md](../PROJECT_BRIEF.md), [E2E_PLAN.md](../E2E_PLAN.md), and
 ```
 home-ops/
 ├── .tool-versions              # asdf-managed CLI versions
-├── talos/                      # talhelper config + generated machine configs (gitignored)
+├── talos/                      # talhelper config + generated machine configs (gitignored,
+│                                 # except talsecret.sops.yaml -- SOPS/age-encrypted, see
+│                                 # .sops.yaml -- committed on purpose)
 ├── terraform/
 │   └── headscale/               # OpenTofu: Oracle Cloud VM + DNS for Headscale -- the one
 │                                 # place in the repo Terraform is used (real cloud
@@ -51,10 +53,20 @@ home-ops/
 └── docs/runbooks/              # the handful of manual, non-GitOps steps
 ```
 
+## Hardware
+
+Running single-node for now on a **HP ProDesk 600 G4 Mini** (i5-8500T, 8GB RAM, 256GB
+SSD). `talos/talconfig.yaml`'s `nodes:` block has just this one real node; see
+[`docs/runbooks/cluster-bootstrap.md`](docs/runbooks/cluster-bootstrap.md) for the
+bare-metal install steps and known single-node limitations (no etcd HA, no spare disk
+for Rook-Ceph OSDs yet, 8GB RAM is tight). More nodes get appended to the same file when
+they arrive — nothing else in the repo changes.
+
 ## Local dev cluster
 
-Hardware (3× Beelink EQ12 Pro) hasn't been purchased yet. Until it arrives, everything is
-developed against a real Talos + Kubernetes cluster running locally:
+Also still useful even with real hardware up — a disposable place to test a
+Renovate-proposed chart bump or a new app before it touches the real node. Runs as a
+real Talos + Kubernetes cluster locally:
 
 ```bash
 talosctl cluster create docker --name home-ops-dev --workers 0 --memory-controlplanes 6GB \
@@ -80,9 +92,12 @@ and end-to-end cloudflared tunnel routing.
 ## Manual steps (everything else is `git push`)
 
 1. [`docs/runbooks/cluster-bootstrap.md`](docs/runbooks/cluster-bootstrap.md) — bring up
-   the node(s), then `helmfile -f bootstrap/helmfile/helmfile.yaml sync` to install Cilium
-   *before* Flux (nothing, including Flux's own controllers, gets pod networking without
-   it — Talos's CNI is disabled), then `flux bootstrap github`
+   the node(s) (first apply to a node in maintenance mode needs
+   `talhelper gencommand apply --extra-flags "--insecure"`, or you'll hit
+   `x509: certificate signed by unknown authority` — see the runbook), then
+   `helmfile -f bootstrap/helmfile/helmfile.yaml sync` to install Cilium *before* Flux
+   (nothing, including Flux's own controllers, gets pod networking without it — Talos's
+   CNI is disabled), then `flux bootstrap github`
 2. [`docs/runbooks/secret-zero.md`](docs/runbooks/secret-zero.md) — `op inject | kubectl apply`
    from an authenticated local `op` session
 3. [`docs/runbooks/cloudflare-setup.md`](docs/runbooks/cloudflare-setup.md) — API token +
@@ -98,5 +113,7 @@ and end-to-end cloudflared tunnel routing.
 Bootstrapping. Local dev cluster live with Flux reconciling; 1Password and Cloudflare are
 both set up and verified end-to-end (`cert-manager-config`, `cloudflared` both `Ready`).
 Headscale hosting location decided (Oracle Cloud Always Free VM, runbook above) but not
-yet provisioned. Remaining: standing up Headscale itself, real hardware, and the apps
-themselves. See task list / commit history for current phase.
+yet provisioned. First real node (HP ProDesk 600 G4 Mini, single-node for now) purchased
+and `talos/talconfig.yaml` updated for it — not yet installed/bootstrapped, see
+`docs/runbooks/cluster-bootstrap.md`. Remaining: install Talos on the real node, stand up
+Headscale, and the apps themselves. See task list / commit history for current phase.

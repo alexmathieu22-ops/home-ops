@@ -167,8 +167,8 @@ sudo headscale nodes list
 
 `TS_ROUTES` in
 [`statefulset.yaml`](../../kubernetes/apps/vpn/headscale-subnet-router/app/statefulset.yaml)
-is still the placeholder `192.168.1.0/24` — replace it with the real home LAN CIDR once
-that's known (check the router's LAN subnet), commit, push, let Flux roll it out.
+is set to the real home LAN CIDR, `192.168.18.0/24` (confirmed from the first node's
+console during install — the repo assumed `192.168.1.0/24` as a placeholder before that).
 
 Headscale doesn't auto-approve advertised routes even from a trusted node — approve it
 explicitly (this Headscale version moved routes under `nodes`, not a standalone `routes`
@@ -176,7 +176,7 @@ command):
 
 ```bash
 sudo headscale nodes list-routes
-sudo headscale nodes approve-routes -i <node-id-from-above> -r 192.168.1.0/24
+sudo headscale nodes approve-routes -i <node-id-from-above> -r 192.168.18.0/24
 ```
 
 ## 8. Add personal devices to the tailnet

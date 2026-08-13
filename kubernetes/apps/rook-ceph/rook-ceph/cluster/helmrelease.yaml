@@ -10,6 +10,17 @@
 # Same reason this can't be validated on the local dev cluster: Docker-provisioned Talos
 # nodes have no raw block devices available either, so CephCluster will likely stay
 # unhealthy there -- that's expected, not a bug (see README.md's local-cluster caveats).
+#
+# CURRENT REAL HARDWARE: the node (HP ProDesk 600 G4 Mini) has one 256GB disk, entirely
+# consumed by the Talos install, zero spare block device. Expect this HelmRelease's
+# CephCluster to sit unhealthy with 0 OSDs until a second disk (USB3 SSD via the box's
+# Type-C port is the easiest option) is attached. Separately: `cephBlockPools` below is
+# `replicated.size: 3` -- with a single node (and likely a single OSD once one exists),
+# Ceph can never place 3 replicas, so the pool will also stay unhealthy even after adding
+# one disk. Not fixed here yet since it doesn't block anything else in the dependency
+# chain -- either leave this Kustomization unreconciled until more nodes exist, or drop
+# `replicated.size` to `1` (data-loss risk, single point of failure) as a deliberate,
+# revisited-later tradeoff if you want in-cluster storage working sooner.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
