@@ -5,3 +5,4 @@ resources:
   - envoy-gateway/ks.yaml
   - cloudflared/ks.yaml
   - gateway-api-crds
+  - adguard-home/ks.yaml

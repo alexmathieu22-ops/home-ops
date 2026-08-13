@@ -15,8 +15,9 @@ self-hosted Headscale.
 | VPN              | Self-hosted [Headscale](https://headscale.net/) + Tailscale subnet router |
 | Secrets          | [1Password Service Account](https://developer.1password.com/docs/service-accounts/) via [External Secrets Operator](https://external-secrets.io/) (`1password-sdk` provider) — zero SOPS |
 | Storage          | [Rook-Ceph](https://rook.io/)                                |
-| Ingress          | [Envoy Gateway](https://gateway.envoyproxy.io/) (Gateway API) |
+| Ingress          | [Envoy Gateway](https://gateway.envoyproxy.io/) (Gateway API) — `internal` Gateway (VPN/tailnet only) + `external` Gateway (public, behind cloudflared) |
 | Observability    | [Gatus](https://github.com/TwiN/gatus) (status page) + metrics-server (`kubectl top`/k9s) |
+| LAN DNS          | [AdGuard Home](https://adguard.com/adguard-home/) — resolves `*.internal.alexandremathieu.com` (the ISP router can't do local DNS records) |
 | Dependency mgmt  | [Renovate](https://docs.renovatebot.com/)                   |
 | Tool versions    | [asdf](https://asdf-vm.com/)                                 |
 | VPN host provisioning | [OpenTofu](https://opentofu.org/) (Oracle Cloud VM + DNS only, see below) |
@@ -107,6 +108,13 @@ and end-to-end cloudflared tunnel routing.
    `tofu apply` the Oracle Cloud Always Free VM (outside the cluster by design, provisioned
    via [`terraform/headscale/`](terraform/headscale)), then wire the in-cluster subnet
    router to it
+5. AdGuard Home (`kubernetes/apps/networking/adguard-home`) — once it's `Ready`, check its
+   assigned LoadBalancer IP (`kubectl get svc -n networking -l app.kubernetes.io/name=adguard-home`)
+   and set it as the **primary** DHCP DNS server on the router (Nokia-provided, ebox) —
+   secondary should stay a public resolver (e.g. `1.1.1.1`) so general internet DNS keeps
+   working via fallback if this pod is ever down. Also swap the placeholder IP in
+   `kubernetes/apps/networking/adguard-home/app/helmrelease.yaml`'s DNS rewrite for the
+   internal Gateway's actual assigned address once known.
 
 ## Status
 
