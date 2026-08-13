@@ -80,51 +80,51 @@ spec:
                 cpu: 10m
               limits:
                 memory: 256Mi
-        defaultPodOptions:
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 1000
-            runAsGroup: 1000
-        # Manually-defined base config (no endpoints list -- those now come from the
-        # sidecar). The kubernetes-api self-check stays here since it isn't something an
-        # HTTPRoute would ever produce; Gatus appends/merges endpoint lists across files
-        # under GATUS_CONFIG_PATH rather than one file overwriting the other.
-        persistence:
-          config:
-            type: emptyDir
-            advancedMounts:
-              gatus:
-                app:
-                  - path: /config
-                gatus-sidecar:
-                  - path: /config
-          config-file:
-            type: configMap
-            identifier: config
-            advancedMounts:
-              gatus:
-                app:
-                  - path: /config/config.yaml
-                    subPath: config.yaml
-                    readOnly: true
-        route:
-          app:
-            # Excludes Gatus's own status page from --auto-httproute so it doesn't
-            # monitor itself.
-            annotations:
-              gatus.home-operations.com/enabled: "false"
-            hostnames:
-              - status.alexandremathieu.com
-            parentRefs:
-              - name: external
-                namespace: networking
-                sectionName: http
-        service:
-          app:
-            controller: gatus
-            ports:
-              http:
-                port: *port
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+    # Manually-defined base config (no endpoints list -- those now come from the
+    # sidecar). The kubernetes-api self-check stays here since it isn't something an
+    # HTTPRoute would ever produce; Gatus appends/merges endpoint lists across files
+    # under GATUS_CONFIG_PATH rather than one file overwriting the other.
+    persistence:
+      config:
+        type: emptyDir
+        advancedMounts:
+          gatus:
+            app:
+              - path: /config
+            gatus-sidecar:
+              - path: /config
+      config-file:
+        type: configMap
+        identifier: config
+        advancedMounts:
+          gatus:
+            app:
+              - path: /config/config.yaml
+                subPath: config.yaml
+                readOnly: true
+    route:
+      app:
+        # Excludes Gatus's own status page from --auto-httproute so it doesn't
+        # monitor itself.
+        annotations:
+          gatus.home-operations.com/enabled: "false"
+        hostnames:
+          - status.alexandremathieu.com
+        parentRefs:
+          - name: external
+            namespace: networking
+            sectionName: http
+    service:
+      app:
+        controller: gatus
+        ports:
+          http:
+            port: *port
     configMaps:
       config:
         data:
@@ -145,24 +145,27 @@ spec:
     # gatus-sidecar needs cluster-wide read on HTTPRoutes/Gateways to watch them -- see
     # IMPLEMENTATION_NOTES.md. Scoped to just what we actually use (no Ingress/Service/
     # Traefik IngressRoute discovery, unlike gatus-sidecar's own upstream RBAC example).
-    extraObjects:
-      - apiVersion: rbac.authorization.k8s.io/v1
-        kind: ClusterRole
-        metadata:
-          name: gatus-sidecar
-        rules:
-          - apiGroups: ["gateway.networking.k8s.io"]
-            resources: ["httproutes", "gateways"]
-            verbs: ["get", "list", "watch"]
-      - apiVersion: rbac.authorization.k8s.io/v1
-        kind: ClusterRoleBinding
-        metadata:
-          name: gatus-sidecar
-        subjects:
-          - kind: ServiceAccount
-            name: gatus
-            namespace: observability
-        roleRef:
-          kind: ClusterRole
-          name: gatus-sidecar
-          apiGroup: rbac.authorization.k8s.io
+    # extraObjects is NOT a supported key in app-template 5.x -- use rbac.roles/bindings
+    # instead (same fix applied to local-path-provisioner's HelmRelease).
+    rbac:
+      roles:
+        gatus-sidecar:
+          # forceRename: with only one entry in rbac.roles, app-template would
+          # otherwise drop the map-key suffix and name this ClusterRole "gatus"
+          # (the fullnameOverride) instead of "gatus-sidecar".
+          forceRename: gatus-sidecar
+          type: ClusterRole
+          rules:
+            - apiGroups: ["gateway.networking.k8s.io"]
+              resources: ["httproutes", "gateways"]
+              verbs: ["get", "list", "watch"]
+      bindings:
+        gatus-sidecar:
+          forceRename: gatus-sidecar
+          type: ClusterRoleBinding
+          roleRef:
+            identifier: gatus-sidecar
+          subjects:
+            - name: gatus
+              kind: ServiceAccount
+              namespace: observability
