@@ -1,8 +1,4 @@
-# Real LAN confirmed as 192.168.18.0/24 (from the node's console during install, not the
-# 192.168.1.0/24 earlier placeholders assumed). This range sits outside the node's
-# reserved IP (talos/talconfig.yaml: 192.168.18.39) on purpose -- double check it doesn't
-# overlap your router's DHCP pool before relying on it (the node's .39 came from that
-# pool, so the pool likely extends at least that far).
+# Real LAN: 192.168.18.0/24. Confirm this range doesn't overlap your router's DHCP pool.
 apiVersion: cilium.io/v2alpha1
 kind: CiliumLoadBalancerIPPool
 metadata:

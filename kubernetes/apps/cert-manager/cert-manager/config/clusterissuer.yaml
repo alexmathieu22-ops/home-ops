@@ -1,7 +1,5 @@
-# Still needs the Cloudflare API token (cloudflare-api-token 1Password item) before this
-# actually issues certs — Cloudflare account setup is deferred (PROJECT_BRIEF.md). Used
-# for internal/VPN-only TLS only — cloudflared terminates TLS at Cloudflare's edge for
-# public traffic.
+# DEFERRED: needs the Cloudflare API token -- see PROJECT_BRIEF.md's "Deferred" list.
+# Internal/VPN-only TLS only -- cloudflared terminates TLS at Cloudflare's edge for public traffic.
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
@@ -9,9 +7,6 @@ metadata:
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    # email is optional in cert-manager's ACME spec (confirmed against onedr0p/home-ops,
-    # which omits it too) -- skipping it means no direct Let's Encrypt expiry-notice
-    # emails, but cert-manager auto-renews anyway so that's low-value here.
     privateKeySecretRef:
       name: letsencrypt-dns01-account-key
     solvers:

@@ -1,11 +1,4 @@
-# The only Kustomization defined centrally -- everything else (namespace grouping,
-# per-component ordering/dependsOn) lives colocated in each component's own ks.yaml under
-# kubernetes/apps/<namespace>/<name>/, matching onedr0p/home-ops and buroa/k8s-gitops's
-# convention: one apps tree grouped by the K8s namespace things deploy into (kube-system,
-# cert-manager, external-secrets, rook-ceph, networking, observability, default), no
-# separate infrastructure/ vs apps/ split. This just points kustomize-controller at that
-# tree; the nested ks.yaml files (applied as part of the same sync, since they're just
-# YAML from kustomize's point of view) do the real fan-out and dependency chaining.
+# Only centrally-defined Kustomization -- see IMPLEMENTATION_NOTES.md for the fan-out pattern.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:

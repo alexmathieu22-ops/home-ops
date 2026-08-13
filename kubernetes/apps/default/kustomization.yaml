@@ -1,10 +1,4 @@
-# Home apps (immich, home-assistant, jellyfin, paperless-ngx, homepage) land here,
-# deploying into the cluster's built-in "default" namespace (no namespace.yaml needed --
-# it always exists) -- matches onedr0p/home-ops and buroa/k8s-gitops's convention of one
-# shared namespace per logical app group, with each app as its own <name>/{ks.yaml, app/}
-# once it's actually implemented. Empty for now per PROJECT_BRIEF.md: waiting on
-# storage/secrets/ingress infra to actually be live rather than guessing chart configs
-# ahead of that.
+# Empty until storage/secrets/ingress infra is live -- see PROJECT_BRIEF.md.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources: []
