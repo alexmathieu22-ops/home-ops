@@ -110,7 +110,7 @@ spec:
               rewrites:
                 # REPLACE with the internal Gateway's actual assigned IP: kubectl get gateway -n networking internal
                 - domain: "*.internal.alexandremathieu.com"
-                  answer: "192.168.18.CHANGEME"
+                  answer: "192.168.18.200"
     persistence:
       config-seed:
         type: configMap
