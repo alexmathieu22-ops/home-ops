@@ -1,5 +1,48 @@
 # Homelab Hardware Plan
 
+> **Current setup.** Running single-node on a **HP ProDesk 600 G4 Mini** (i5-8500T, 6C/6T,
+> 8GB RAM, 256GB SSD). Practical implications, tracked here as we go rather than
+> re-litigating the plan below (which still describes the eventual multi-node target):
+>
+> - **No etcd HA** with one node — expected for a single-node start.
+> - **8GB RAM** is on the low side for the full stack. The ProDesk 600 G4 Mini has 2x
+>   DDR4 SODIMM slots, up to 32GB total — a cheap upgrade (~CAD $40-60 for 16-32GB DDR4)
+>   if things get tight, likely once Rook-Ceph + observability + several apps are all
+>   running concurrently.
+> - **Single 256GB disk, fully consumed by the OS install** — no spare raw block device
+>   for Rook-Ceph OSDs. The box actually has a second, empty M.2 slot (plus a 2.5" SATA
+>   bay, though using both at once needs the drive carrier removed for clearance) — a
+>   cheap second M.2 SSD there is the fix, cleaner than a USB3 external drive off the
+>   Type-C port. Until then, Rook-Ceph comes up with zero usable OSDs (documented as
+>   non-destructive in the HelmRelease's caveat comment).
+> - **i5-8500T's UHD Graphics 630** has Quick Sync hardware transcode — a genuine upside
+>   for Jellyfin.
+> - Additional nodes don't have to match this box — see "3 identical nodes" note below
+>   for why uniform hardware is still preferable if buying fresh.
+>
+> **Node 2, available but deferred**: an old laptop (i7-8550U, Nvidia MX150, 8GB 2400MHz
+> SODIMM, 256GB SSD + 1TB HDD) — only WiFi is set up on it right now, and cluster
+> networking needs stable wired Ethernet, so it's on hold until that's sorted (onboard
+> port or a USB dongle). When it's added:
+> - **Worker, not control-plane** — etcd only gains real fault tolerance at 3 members
+>   (`floor((n-1)/2)` failures tolerated: 0 at both 1 and 2 nodes, 1 at 3). A second
+>   control-plane node adds fragility, not HA. `controlPlane: false` in `talconfig.yaml`.
+> - **256GB SSD** → Talos install disk. **1TB HDD** → second Rook-Ceph OSD, giving two
+>   real cross-host OSDs — bump `cephBlockPools[].spec.replicated.size` to `2` at that
+>   point (`failureDomain: host` already correct). HDD performance under bluestore is
+>   mediocre without a WAL/DB device on faster media; a partition of the SSD can serve
+>   that if it's needed later.
+> - MX150 GPU passthrough (NVENC/CUDA) is a maybe-later curiosity, not day-one work —
+>   needs the Nvidia driver extension + `nvidia-container-toolkit` + device plugin for a
+>   fairly weak, old 2GB-VRAM chip.
+> - Before relying on it 24/7 unattended: confirm the battery isn't swollen (or run
+>   AC-only if in doubt), and check whether it stays awake with the lid closed.
+>
+> See `docs/runbooks/cluster-bootstrap.md` for the single-node bring-up steps. This
+> section gets updated as the setup evolves.
+
+---
+
 Prices are USD street price as of mid-2026 unless noted; **Canadian pricing typically runs
 30–40% higher** on imported mini PCs due to exchange rate + import costs — budget accordingly
 for Montréal. All tiers assume **3 nodes minimum** (etcd quorum for Talos HA) and an apartment
