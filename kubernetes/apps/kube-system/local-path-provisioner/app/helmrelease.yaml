@@ -46,6 +46,11 @@ spec:
               # app-template derives from fullnameOverride.
               - --configmap-name
               - local-path-provisioner
+              # Same story for the helper pod's ServiceAccount -- default is
+              # "local-path-provisioner-service-account", ours is named after
+              # fullnameOverride.
+              - --service-account-name
+              - local-path-provisioner
             env:
               POD_NAMESPACE:
                 valueFrom:
