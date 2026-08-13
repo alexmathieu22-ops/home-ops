@@ -1,0 +1,136 @@
+# bjw-s app-template, not a per-app community chart -- see IMPLEMENTATION_NOTES.md
+# ("Networking"). route.main below is keyed to match service.main, so app-template wires
+# the HTTPRoute's backendRef to that Service automatically -- no separate httproute.yaml,
+# no guessing the rendered Service name (see Gatus's HelmRelease for the same pattern).
+# NOT YET LIVE-VERIFIED: probe behavior needs a `kubectl get pods -n networking` check
+# after first reconcile.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: adguard-home
+  namespace: networking
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: adguard-home
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    fullnameOverride: adguard-home
+    controllers:
+      main:
+        # Copies the git-sourced config (below) into the writable emptyDir every start --
+        # no persistence yet, so this always wins over any UI-driven change. See
+        # IMPLEMENTATION_NOTES.md for the persistence/admin-account tradeoff.
+        initContainers:
+          init-config:
+            image:
+              repository: docker.io/library/busybox
+              tag: "1.37"
+            command:
+              - sh
+              - -c
+              - cp /config-seed/AdGuardHome.yaml /opt/adguardhome/conf/AdGuardHome.yaml
+        containers:
+          main:
+            image:
+              repository: docker.io/adguard/adguardhome
+              tag: v0.107.78
+            probes:
+              liveness:
+                enabled: true
+                type: TCP
+                port: 3000
+              readiness:
+                enabled: true
+                type: TCP
+                port: 3000
+              startup:
+                enabled: true
+                type: TCP
+                port: 3000
+                spec:
+                  failureThreshold: 30
+                  periodSeconds: 5
+            resources:
+              requests:
+                cpu: 25m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
+    service:
+      main:
+        controller: main
+        type: ClusterIP
+        ports:
+          http:
+            port: 3000
+      dns-udp:
+        controller: main
+        type: LoadBalancer
+        ports:
+          dns:
+            port: 53
+            protocol: UDP
+      dns-tcp:
+        controller: main
+        type: LoadBalancer
+        ports:
+          dns:
+            port: 53
+            protocol: TCP
+    route:
+      main:
+        hostnames:
+          - "adguard.internal.alexandremathieu.com"
+        parentRefs:
+          - name: internal
+            namespace: networking
+            sectionName: https
+    configMaps:
+      config:
+        data:
+          AdGuardHome.yaml: |
+            dns:
+              bind_hosts:
+                - 0.0.0.0
+              port: 53
+              upstream_dns:
+                - https://1.1.1.1/dns-query
+                - https://1.0.0.1/dns-query
+              bootstrap_dns:
+                - 1.1.1.1
+                - 1.0.0.1
+            filtering:
+              rewrites:
+                # REPLACE with the internal Gateway's actual assigned IP: kubectl get gateway -n networking internal
+                - domain: "*.internal.alexandremathieu.com"
+                  answer: "192.168.18.CHANGEME"
+    persistence:
+      config-seed:
+        type: configMap
+        identifier: config
+        advancedMounts:
+          main:
+            init-config:
+              - path: /config-seed
+                readOnly: true
+      conf:
+        type: emptyDir
+        advancedMounts:
+          main:
+            init-config:
+              - path: /opt/adguardhome/conf
+            main:
+              - path: /opt/adguardhome/conf
+      work:
+        type: emptyDir
+        advancedMounts:
+          main:
+            main:
+              - path: /opt/adguardhome/work
