@@ -13,7 +13,8 @@ Talos Kubernetes cluster (3 nodes, bare metal)
 ├── cloudflared          (public exposure — no port-forward, no public IP needed)
 ├── external-secrets    (1Password Service Account provider)
 ├── Rook-Ceph            (in-cluster PVCs) + NAS (bulk media, NFS)
-├── Envoy Gateway        (Gateway API implementation, internal/VPN-only ingress)
+├── Envoy Gateway        (Gateway API implementation -- internal/VPN-only Gateway +
+│                         external/public Gateway, matching onedr0p/cluster-template)
 ├── Headscale subnet router (advertises home LAN CIDR into the tailnet)
 ├── Gatus (observability -- status page; metrics-server for kubectl top/k9s)
 ├── Flux CD              (GitOps reconciler — the thing that owns everything above)
@@ -239,13 +240,20 @@ declared in each component's own `ks.yaml`):
    TLS, since cloudflared handles TLS termination for public traffic itself.
 3. **external-secrets** — `ClusterSecretStore` pointing at the 1Password SDK provider,
    using the secret-zero token from Phase 3.
-4. **cloudflared** — Deployment (or DaemonSet) in-cluster, routes by hostname straight to
-   `ClusterIP` Services — no LoadBalancer IP, no port-forward, no public IP needed at all.
-   Public hostnames are configured in the tunnel, not via DNS records pointing at your IP.
+4. **cloudflared** — Deployment (or DaemonSet) in-cluster. ONE static ingress rule in the
+   tunnel config routes `*.alexandremathieu.com` to the `external` Envoy Gateway's
+   `ClusterIP` Service (not per-app Services — see Phase 5 item 6 and
+   `docs/runbooks/cloudflare-setup.md`) — no LoadBalancer IP, no port-forward, no public
+   IP needed at all. That one wildcard hostname is configured in the tunnel, not via DNS
+   records pointing at your IP; every app after it is just an `HTTPRoute`.
 5. **Rook-Ceph** — default StorageClass for app PVCs; configure S3 (Backblaze B2) backup
    target early, not after you have data.
-6. **Envoy Gateway** — the Gateway API implementation for internal/VPN-only traffic; one
-   `Gateway` resource, reachable via the Cilium LB-IPAM IP over the tailnet.
+6. **Envoy Gateway** — the Gateway API implementation for both internal and public
+   traffic (matching onedr0p/cluster-template, confirmed against its docs): an `internal`
+   `Gateway`, reachable via the Cilium LB-IPAM IP over the tailnet, and an `external`
+   `Gateway` (ClusterIP only, no LB-IPAM IP needed) that cloudflared's one static ingress
+   rule points at — every public app after that is just an `HTTPRoute`, no more manual
+   Cloudflare dashboard edits per app (see `docs/runbooks/cloudflare-setup.md`).
 
 ---
 

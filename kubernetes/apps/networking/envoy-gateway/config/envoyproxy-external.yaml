@@ -1,0 +1,12 @@
+# Forces the external Gateway's Service to ClusterIP -- see IMPLEMENTATION_NOTES.md ("Networking").
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: external-clusterip
+  namespace: networking
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        type: ClusterIP
