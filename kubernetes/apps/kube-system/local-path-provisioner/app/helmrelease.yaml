@@ -40,6 +40,12 @@ spec:
               - start
               - --config
               - /etc/config/config.json
+              # local-path-provisioner reads the helper pod template from a ConfigMap it
+              # looks up by name via the API (default "local-path-config"), separate from
+              # the --config file above -- must match the actual ConfigMap name, which
+              # app-template derives from fullnameOverride.
+              - --configmap-name
+              - local-path-provisioner
             env:
               POD_NAMESPACE:
                 valueFrom:
