@@ -1,16 +1,7 @@
-# Deliberately lightweight, replacing the kube-prometheus-stack + Loki + Alloy plan (see
-# git history / PROJECT_BRIEF.md) -- that stack is what onedr0p/buroa actually run, but
-# both target multi-node clusters with real RAM headroom; on this single 8GB node it was
-# competing with Cilium/cert-manager/external-secrets/apps for the same tight budget.
-# Gatus alone covers "is everything up" (a status page you can glance at) without that
-# cost. Whether to add real metrics/logs later (self-hosted stack once node 2 exists, or
-# Grafana Cloud's free tier instead) is still an open decision -- not made here.
-#
-# persistence.enabled: false on purpose, not an oversight: Rook-Ceph currently has zero
-# usable OSDs on this hardware (see kubernetes/apps/rook-ceph's caveat), so a PVC-backed
-# config would just sit unreconciled. Uptime history resets on pod restart until storage
-# exists -- acceptable for a "is it up right now" status page. Flip this on once
-# ceph-block is actually available.
+# bjw-s app-template + the gatus-sidecar auto-discovery pattern from buroa/k8s-gitops --
+# see IMPLEMENTATION_NOTES.md ("Observability"). Adapted, not copied: no ServiceMonitor
+# (no Prometheus here), no Reloader annotation (not installed), no alerting secretRef
+# (not wired up yet), image pinned by tag only (no digest -- not verified from here).
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -18,14 +9,9 @@ metadata:
   namespace: observability
 spec:
   interval: 1h
-  chart:
-    spec:
-      chart: gatus
-      version: "1.x"
-      sourceRef:
-        kind: HelmRepository
-        name: twin
-      interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: gatus
   install:
     remediation:
       retries: 3
@@ -33,19 +19,150 @@ spec:
     remediation:
       retries: 3
   values:
-    persistence:
-      enabled: false
-    config:
-      endpoints:
-        # Placeholder self-check so the deployment isn't monitoring nothing -- replace/add
-        # to this list as real apps and internal services come online.
-        - name: kubernetes-api
-          group: internal
-          url: https://kubernetes.default.svc.cluster.local
-          interval: 60s
-          client:
-            insecure: true
-          conditions:
-            - "[STATUS] == 200"
-            - "[STATUS] == 401"
-            - "[STATUS] == 403"
+    fullnameOverride: gatus
+    controllers:
+      gatus:
+        # Native sidecar (initContainer + restartPolicy: Always): starts before the main
+        # container, watches HTTPRoutes cluster-wide, writes discovered endpoints to
+        # /config/gatus-sidecar.yaml. Gatus merges every *.yaml under GATUS_CONFIG_PATH
+        # (a directory, not a single file) and hot-reloads on change -- no restart needed
+        # when apps come and go. --gateway-name covers BOTH Gateways (not just external,
+        # unlike buroa's public-only setup) since this status page's job is general "is
+        # anything down" awareness, not just public uptime -- narrow to just `external`
+        # later if a fully public status page shouldn't reveal internal-only app names.
+        initContainers:
+          gatus-sidecar:
+            image:
+              repository: ghcr.io/home-operations/gatus-sidecar
+              tag: "0.4.0"
+            args:
+              - --auto-httproute
+              - --enable-httproute
+              - --gateway-name=external
+              - --gateway-name=internal
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 10m
+              limits:
+                memory: 64Mi
+            restartPolicy: Always
+        containers:
+          app:
+            image:
+              repository: ghcr.io/twin/gatus
+              tag: v5.36.0
+            env:
+              GATUS_WEB_PORT: &port 80
+              GATUS_CONFIG_PATH: /config
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: *port
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              readiness: *probes
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 10m
+              limits:
+                memory: 256Mi
+        defaultPodOptions:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+        # Manually-defined base config (no endpoints list -- those now come from the
+        # sidecar). The kubernetes-api self-check stays here since it isn't something an
+        # HTTPRoute would ever produce; Gatus appends/merges endpoint lists across files
+        # under GATUS_CONFIG_PATH rather than one file overwriting the other.
+        persistence:
+          config:
+            type: emptyDir
+            advancedMounts:
+              gatus:
+                app:
+                  - path: /config
+                gatus-sidecar:
+                  - path: /config
+          config-file:
+            type: configMap
+            identifier: config
+            advancedMounts:
+              gatus:
+                app:
+                  - path: /config/config.yaml
+                    subPath: config.yaml
+                    readOnly: true
+        route:
+          app:
+            # Excludes Gatus's own status page from --auto-httproute so it doesn't
+            # monitor itself.
+            annotations:
+              gatus.home-operations.com/enabled: "false"
+            hostnames:
+              - status.alexandremathieu.com
+            parentRefs:
+              - name: external
+                namespace: networking
+                sectionName: http
+        service:
+          app:
+            controller: gatus
+            ports:
+              http:
+                port: *port
+    configMaps:
+      config:
+        data:
+          config.yaml: |
+            ui:
+              title: home-ops status
+            endpoints:
+              - name: kubernetes-api
+                group: internal
+                url: https://kubernetes.default.svc.cluster.local
+                interval: 60s
+                client:
+                  insecure: true
+                conditions:
+                  - "[STATUS] == 200"
+                  - "[STATUS] == 401"
+                  - "[STATUS] == 403"
+    # gatus-sidecar needs cluster-wide read on HTTPRoutes/Gateways to watch them -- see
+    # IMPLEMENTATION_NOTES.md. Scoped to just what we actually use (no Ingress/Service/
+    # Traefik IngressRoute discovery, unlike gatus-sidecar's own upstream RBAC example).
+    extraObjects:
+      - apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRole
+        metadata:
+          name: gatus-sidecar
+        rules:
+          - apiGroups: ["gateway.networking.k8s.io"]
+            resources: ["httproutes", "gateways"]
+            verbs: ["get", "list", "watch"]
+      - apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRoleBinding
+        metadata:
+          name: gatus-sidecar
+        subjects:
+          - kind: ServiceAccount
+            name: gatus
+            namespace: observability
+        roleRef:
+          kind: ClusterRole
+          name: gatus-sidecar
+          apiGroup: rbac.authorization.k8s.io

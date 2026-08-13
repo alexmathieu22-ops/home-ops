@@ -12,6 +12,8 @@ spec:
   targetNamespace: observability
   dependsOn:
     - name: cilium
+    # for the HTTPRoute's parentRef (the external Gateway) to actually exist first
+    - name: envoy-gateway-config
   sourceRef:
     kind: GitRepository
     name: flux-system
