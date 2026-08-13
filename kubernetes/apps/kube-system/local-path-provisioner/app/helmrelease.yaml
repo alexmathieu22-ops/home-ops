@@ -1,8 +1,6 @@
-# bjw-s app-template, not a community chart (Rancher doesn't publish one -- see
-# rancher/local-path-provisioner#89) -- see IMPLEMENTATION_NOTES.md ("Storage") for the
-# interim-storage rationale. RBAC/ConfigMap/StorageClass are hand-written below using
-# app-template 5.x's rbac/rawResources keys (NOT extraObjects -- that key doesn't exist in
-# this chart version and silently no-ops), matching upstream's own raw deploy manifest 1:1
+# RBAC/ConfigMap/StorageClass are hand-written below using app-template 5.x's
+# rbac/rawResources keys (NOT extraObjects -- that key doesn't exist in this chart
+# version and silently no-ops), matching upstream's own raw deploy manifest 1:1
 # (rancher/local-path-provisioner deploy/local-path-storage.yaml) rather than any
 # third-party packaging of it. defaultPodOptions.automountServiceAccountToken must be set
 # true -- app-template defaults it to false, which breaks in-cluster auth for controllers

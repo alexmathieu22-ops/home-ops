@@ -1,7 +1,7 @@
-# bjw-s app-template + the gatus-sidecar auto-discovery pattern from buroa/k8s-gitops --
-# see IMPLEMENTATION_NOTES.md ("Observability"). Adapted, not copied: no ServiceMonitor
-# (no Prometheus here), no Reloader annotation (not installed), no alerting secretRef
-# (not wired up yet), image pinned by tag only (no digest -- not verified from here).
+# Adapted from buroa/k8s-gitops's gatus-sidecar auto-discovery pattern, not copied:
+# no ServiceMonitor (no Prometheus here), no Reloader annotation (not installed), no
+# alerting secretRef (not wired up yet), image pinned by tag only (no digest -- not
+# verified from here).
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
