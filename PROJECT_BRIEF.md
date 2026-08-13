@@ -27,6 +27,15 @@ flag it before deviating.
 | **Rook-Ceph** for in-cluster storage                                                 | Longhorn                                     | Amended from the original Longhorn decision: most widely used in comparable reference repos (onedr0p/home-ops, buroa/k8s-gitops). Needs a dedicated raw block device per node — flagged in `HARDWARE_PLAN.md` as unbudgeted.               |
 | Renovate for dependency updates                                                      | Manual version bumps                         | "Fully as code" requirement — every update should be a mergeable PR                                                                                                                                                                        |
 
+**Amendment, not a correction (interim, explicitly time-boxed):** with Rook-Ceph stuck at
+zero usable OSDs on the current single-disk hardware, `local-path-provisioner`
+(node-local hostPath storage, no HA/replication) is running as the cluster's default
+`StorageClass` so PVC-dependent apps aren't blocked entirely -- see
+`kubernetes/apps/kube-system/local-path-provisioner` and
+`docs/runbooks/cluster-bootstrap.md`'s "Known limitations running single-node" section.
+This does not replace the Rook-Ceph decision above; it's a stopgap until a second disk
+exists, at which point PVCs move back to `ceph-block` and this section should be removed.
+
 ## Hardware context (informs manifests but doesn't block software work)
 
 - Current: a single HP ProDesk 600 G4 Mini (i5-8500T, 6C/6T, 8GB RAM, 256GB SSD), running

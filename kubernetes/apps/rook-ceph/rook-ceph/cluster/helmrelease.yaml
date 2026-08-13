@@ -106,7 +106,8 @@ spec:
         storageClass:
           enabled: true
           name: ceph-block
-          isDefault: true
+          # local-path-provisioner is the default StorageClass until real OSDs exist here.
+          isDefault: false
           allowVolumeExpansion: true
           reclaimPolicy: Delete
           volumeBindingMode: Immediate
