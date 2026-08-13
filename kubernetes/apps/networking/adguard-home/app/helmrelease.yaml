@@ -1,6 +1,4 @@
-# bjw-s app-template, not a per-app community chart -- see IMPLEMENTATION_NOTES.md
-# ("Networking"). Unlike Gatus (one Service, so route.main -> service.main is unambiguous),
-# this controller fans out to three Services (main/dns-udp/dns-tcp), so app-template can't
+# This controller fans out to three Services (main/dns-udp/dns-tcp), so app-template can't
 # auto-detect which one the route should hit -- route.main.rules.backendRefs below points
 # it at service.main explicitly by identifier.
 apiVersion: helm.toolkit.fluxcd.io/v2
