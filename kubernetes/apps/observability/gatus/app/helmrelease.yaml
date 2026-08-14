@@ -122,6 +122,19 @@ spec:
           - name: external
             namespace: networking
             sectionName: http
+      # Internal-only exposure alongside the external one, to verify the internal Gateway
+      # (adguard-home rewrite -> Envoy) path end-to-end -- a separate route/hostname rather
+      # than adding "internal" as a second parentRef on route.app, since hostnames are
+      # shared across all parentRefs on one HTTPRoute and app's are public domain names.
+      app-internal:
+        annotations:
+          gatus.home-operations.com/enabled: "false"
+        hostnames:
+          - gatus.internal.alexandremathieu.com
+        parentRefs:
+          - name: internal
+            namespace: networking
+            sectionName: https
     service:
       app:
         controller: gatus
