@@ -11,10 +11,10 @@ endpoints:
     interval: 60s
     client:
       insecure: true
+    # Gatus conditions are ANDed, not ORed -- three separate [STATUS] == N entries can
+    # never all be true for one response, so this always failed. any() is Gatus's OR.
     conditions:
-      - "[STATUS] == 200"
-      - "[STATUS] == 401"
-      - "[STATUS] == 403"
+      - "[STATUS] == any(200, 401, 403)"
 
   - name: google
     group: external
