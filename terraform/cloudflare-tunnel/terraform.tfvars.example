@@ -20,3 +20,6 @@ domain = "alexandremathieu.com"
 
 # kubectl get svc -n networking -l gateway.envoyproxy.io/owning-gateway-name=external
 external_gateway_service = "envoy-networking-external-8c60613e.networking.svc.cluster.local"
+
+# Who can log into Access-protected apps (Gatus status page) via emailed one-time PIN.
+access_allowed_emails = ["alexandremathieu@outlook.com"]

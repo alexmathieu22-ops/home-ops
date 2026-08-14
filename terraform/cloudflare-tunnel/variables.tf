@@ -29,3 +29,8 @@ variable "external_gateway_service" {
   description = "In-cluster DNS name of the external Envoy Gateway's Service -- not stable across Gateway recreation, since Envoy Gateway derives it from the Gateway's UID. Re-check with: kubectl get svc -n networking -l gateway.envoyproxy.io/owning-gateway-name=external"
   type        = string
 }
+
+variable "access_allowed_emails" {
+  description = "Email addresses allowed to log into Access-protected apps (e.g. the Gatus status page) via Cloudflare's emailed one-time PIN -- no external IdP required."
+  type        = list(string)
+}
