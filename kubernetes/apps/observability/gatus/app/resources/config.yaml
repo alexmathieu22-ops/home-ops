@@ -1,3 +1,6 @@
+web:
+  port: 80
+
 ui:
   title: home-ops status
 
