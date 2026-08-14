@@ -97,6 +97,13 @@ spec:
       config:
         data:
           AdGuardHome.yaml: |
+            # schema_version pinned to skip AdGuardHome's internal config migrator entirely.
+            # Confirmed via repeated `docker run` repro: starting from an unversioned file
+            # (the natural state of a hand-written seed) silently WIPES the rewrites list
+            # partway through the version-0-to-34 migration chain, regardless of correct
+            # placement/fields -- this is a real AdGuardHome bug, not a config mistake.
+            # Bump this only after checking the target version's migration notes.
+            schema_version: 34
             dns:
               bind_hosts:
                 - 0.0.0.0
@@ -111,13 +118,16 @@ spec:
               # string" -- its early log-settings parser and full config schema disagree on
               # whether the field is `[]string` or `[][]string`. Confirmed via local
               # `docker run` repro against the exact image/tag used here.
-            # rewrites is top-level, not nested under filtering (confirmed against
-            # AdGuardHome's schema) -- the "cannot construct !!seq into string" error also
-            # came from this nesting being wrong.
-            rewrites:
-              # REPLACE with the internal Gateway's actual assigned IP: kubectl get gateway -n networking internal
-              - domain: "*.internal.alexandremathieu.com"
-                answer: "192.168.18.200"
+            # rewrites belongs under filtering, NOT top-level -- confirmed by inspecting the
+            # config AdGuardHome itself writes after adding a rewrite via its own REST API
+            # (POST /control/rewrite/add). enabled: true is required per-entry; omitting it
+            # is silently treated as invalid and dropped.
+            filtering:
+              rewrites:
+                # REPLACE with the internal Gateway's actual assigned IP: kubectl get gateway -n networking internal
+                - domain: "*.internal.alexandremathieu.com"
+                  answer: "192.168.18.200"
+                  enabled: true
     persistence:
       config-seed:
         type: configMap
