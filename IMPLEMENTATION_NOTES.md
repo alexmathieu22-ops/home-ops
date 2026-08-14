@@ -158,6 +158,17 @@ is split out from `networking` specifically to scope its permissive PodSecurity 
 (this workload needs `NET_ADMIN`/`NET_RAW` and a hostPath `/dev/net/tun` mount) to only
 the workload that needs them.
 
+**Flux GitHub webhook** (`kubernetes/apps/flux-system/webhooks`): a notification-controller
+`Receiver` (type `github`) so a push reconciles immediately instead of waiting out the
+`GitRepository`'s 1-minute poll — matches onedr0p/home-ops and buroa/k8s-gitops. The
+`Receiver`'s `resources` list only needs the `GitRepository`, not every downstream
+`Kustomization`: kustomize-controller already watches it for revision changes, so anything
+sourced from it reconciles right after. Routed through the same `external` Gateway +
+cloudflared tunnel as any other public app (`webhook-receiver`, a separate Service from
+notification-controller's own — see `gotk-components.yaml` — on its dedicated
+`http-webhook` port). Manual GitHub-side step (token generation, webhook creation) is
+`docs/runbooks/flux-webhook.md`, same shape as `cloudflare-setup.md`'s public-hostname step.
+
 ## Secrets: 1Password SDK provider
 
 `ClusterSecretStore` uses ESO's `onepasswordSDK` provider (not the older Connect-based

@@ -1,0 +1,19 @@
+# Only the GitRepository needs listing here -- kustomize-controller already watches it for
+# revision changes, so every Kustomization sourced from it reconciles shortly after,
+# without being listed individually.
+apiVersion: notification.toolkit.fluxcd.io/v1
+kind: Receiver
+metadata:
+  name: github-flux-system
+  namespace: flux-system
+spec:
+  type: github
+  events:
+    - "push"
+  secretRef:
+    name: flux-webhook-token
+  resources:
+    - apiVersion: source.toolkit.fluxcd.io/v1
+      kind: GitRepository
+      name: flux-system
+      namespace: flux-system
