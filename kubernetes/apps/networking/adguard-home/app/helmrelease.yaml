@@ -104,14 +104,20 @@ spec:
               upstream_dns:
                 - https://1.1.1.1/dns-query
                 - https://1.0.0.1/dns-query
-              bootstrap_dns:
-                - 1.1.1.1
-                - 1.0.0.1
-            filtering:
-              rewrites:
-                # REPLACE with the internal Gateway's actual assigned IP: kubectl get gateway -n networking internal
-                - domain: "*.internal.alexandremathieu.com"
-                  answer: "192.168.18.200"
+              # No bootstrap_dns: upstream_dns above already uses literal IPs, so there's no
+              # hostname to bootstrap-resolve. Also: AdGuardHome v0.107.78 has a real bug
+              # where a flat bootstrap_dns list (`[]string`, the only form its own schema
+              # accepts as input) crashes on startup with "cannot construct !!seq into
+              # string" -- its early log-settings parser and full config schema disagree on
+              # whether the field is `[]string` or `[][]string`. Confirmed via local
+              # `docker run` repro against the exact image/tag used here.
+            # rewrites is top-level, not nested under filtering (confirmed against
+            # AdGuardHome's schema) -- the "cannot construct !!seq into string" error also
+            # came from this nesting being wrong.
+            rewrites:
+              # REPLACE with the internal Gateway's actual assigned IP: kubectl get gateway -n networking internal
+              - domain: "*.internal.alexandremathieu.com"
+                answer: "192.168.18.200"
     persistence:
       config-seed:
         type: configMap
