@@ -50,10 +50,21 @@ spec:
                   timeoutSeconds: 5
                   failureThreshold: 5
               readiness: *probes
+              # A bare TCP startup probe succeeds the moment the port opens, well before
+              # HA has actually finished first-boot init (creating its default config,
+              # venv, etc.) -- that handed control to liveness/readiness too early, which
+              # then killed the container on a 404 from a still-initializing /healthz,
+              # every restart, forever. Using the same httpGet check here instead means
+              # kubelet won't hand off until the app is genuinely ready.
               startup:
                 enabled: true
+                custom: true
                 spec:
+                  httpGet:
+                    path: /healthz
+                    port: *port
                   periodSeconds: 10
+                  timeoutSeconds: 5
                   failureThreshold: 30
             securityContext:
               allowPrivilegeEscalation: false
