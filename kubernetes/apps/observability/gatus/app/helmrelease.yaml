@@ -81,6 +81,7 @@ spec:
               limits:
                 memory: 256Mi
     defaultPodOptions:
+      automountServiceAccountToken: true
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -100,13 +101,11 @@ spec:
               - path: /config
       config-file:
         type: configMap
-        identifier: config
-        advancedMounts:
-          gatus:
-            app:
-              - path: /config/config.yaml
-                subPath: config.yaml
-                readOnly: true
+        name: gatus-configmap
+        globalMounts:
+          - path: /config/config.yaml
+            subPath: config.yaml
+            readOnly: true
     route:
       app:
         # Excludes Gatus's own status page from --auto-httproute so it doesn't
@@ -114,6 +113,7 @@ spec:
         annotations:
           gatus.home-operations.com/enabled: "false"
         hostnames:
+          - "{{ .Release.Name }}.alexandremathieu.com"
           - status.alexandremathieu.com
         parentRefs:
           - name: external
@@ -125,23 +125,6 @@ spec:
         ports:
           http:
             port: *port
-    configMaps:
-      config:
-        data:
-          config.yaml: |
-            ui:
-              title: home-ops status
-            endpoints:
-              - name: kubernetes-api
-                group: internal
-                url: https://kubernetes.default.svc.cluster.local
-                interval: 60s
-                client:
-                  insecure: true
-                conditions:
-                  - "[STATUS] == 200"
-                  - "[STATUS] == 401"
-                  - "[STATUS] == 403"
     # gatus-sidecar needs cluster-wide read on HTTPRoutes/Gateways to watch them -- see
     # IMPLEMENTATION_NOTES.md. Scoped to just what we actually use (no Ingress/Service/
     # Traefik IngressRoute discovery, unlike gatus-sidecar's own upstream RBAC example).
