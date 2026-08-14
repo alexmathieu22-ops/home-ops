@@ -1,0 +1,105 @@
+# Adapted from onedr0p/home-ops and buroa/k8s-gitops, not copied:
+# - No Multus/dedicated IoT VLAN IP (k8s.v1.cni.cncf.io/networks in both references) --
+#   this cluster has no Multus CNI or VLAN segmentation. Plain ClusterIP-backed pod.
+# - No Gateway API route / Cloudflare Access, unlike either reference. Exposed instead as
+#   a LoadBalancer Service straight from Cilium's LB-IPAM -- gets its own LAN IP directly
+#   (`kubectl get svc -n default home-assistant-app`), no hostname/DNS/TLS needed. Chosen
+#   over the Gateway route because there's no working network-wide internal DNS yet
+#   (AdGuard was pulled pending the UniFi gateway project) and because a smart-home panel
+#   is more sensitive than a status page to leave path-dependent on that.
+# - storageClass: local-path, not ceph-block -- Rook-Ceph has no OSDs deployed yet (same
+#   reason headscale-subnet-router uses local-path). Migrate once Ceph is actually live.
+# - No ExternalSecret/integration API keys (weather providers, etc. in onedr0p's) -- add
+#   if/when specific integrations need them.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: home-assistant
+  namespace: default
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: home-assistant
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    fullnameOverride: home-assistant
+    controllers:
+      home-assistant:
+        containers:
+          app:
+            image:
+              repository: ghcr.io/home-operations/home-assistant
+              tag: 2026.8.1
+            env:
+              TZ: America/Toronto
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: &port 8123
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+              readiness: *probes
+              startup:
+                enabled: true
+                spec:
+                  periodSeconds: 10
+                  failureThreshold: 30
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 10m
+              limits:
+                memory: 2Gi
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+    service:
+      app:
+        controller: home-assistant
+        type: LoadBalancer
+        ports:
+          http:
+            port: *port
+    # config is the only real persistent data; .venv/logs/tts/tmp are regenerable, so they
+    # live on a separate emptyDir layered over /config via subPath mounts rather than
+    # growing the persistent volume with disposable data (same split buroa uses).
+    persistence:
+      config:
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        size: 5Gi
+        storageClass: local-path
+        globalMounts:
+          - path: /config
+      scratch:
+        type: emptyDir
+        advancedMounts:
+          home-assistant:
+            app:
+              - path: /config/.venv
+                subPath: venv
+              - path: /config/logs
+                subPath: logs
+              - path: /config/tts
+                subPath: tts
+              - path: /tmp
+                subPath: tmp
