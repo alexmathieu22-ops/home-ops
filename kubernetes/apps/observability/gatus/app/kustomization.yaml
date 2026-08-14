@@ -3,3 +3,12 @@ kind: Kustomization
 resources:
   - ocirepository.yaml
   - helmrelease.yaml
+configMapGenerator:
+  - name: gatus-configmap
+    files:
+      - ./resources/buddy.yaml
+      - ./resources/config.yaml
+generatorOptions:
+  disableNameSuffixHash: true
+  annotations:
+    kustomize.toolkit.fluxcd.io/substitute: disabled
