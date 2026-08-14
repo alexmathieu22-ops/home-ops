@@ -27,3 +27,13 @@ spec:
     # cert-manager doesn't need an HTTP01 solver/ingress-class here.
     extraArgs:
       - --dns01-recursive-nameservers-only
+    # Without this, cert-manager never watches Gateway resources for the
+    # cert-manager.io/cluster-issuer annotation -- the internal Gateway's https listener
+    # (kubernetes/apps/networking/envoy-gateway/config/gateway-internal.yaml) referenced a
+    # cert secret that was never created as a result, breaking TLS for every internal-only
+    # route. RBAC for Gateway API resources is already unconditional in this chart version,
+    # so no separate permission change is needed.
+    config:
+      apiVersion: controller.config.cert-manager.io/v1alpha1
+      kind: ControllerConfiguration
+      enableGatewayAPI: true
