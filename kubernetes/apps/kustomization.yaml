@@ -8,4 +8,5 @@ resources:
   - networking
   - vpn
   - observability
+  - flux-system
   - default
