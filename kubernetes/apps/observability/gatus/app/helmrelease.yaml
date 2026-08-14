@@ -56,8 +56,11 @@ spec:
               repository: ghcr.io/twin/gatus
               tag: v5.36.0
             env:
-              GATUS_WEB_PORT: &port 80
               GATUS_CONFIG_PATH: /config
+            # Gatus's web port is set via config.yaml's web.port (resources/config.yaml),
+            # not an env var -- GATUS_WEB_PORT doesn't exist and was silently ignored
+            # (verified: image always binds 8080 regardless). This anchor just keeps the
+            # probe/service ports in sync with that config.yaml value.
             probes:
               liveness: &probes
                 enabled: true
@@ -65,7 +68,7 @@ spec:
                 spec:
                   httpGet:
                     path: /health
-                    port: *port
+                    port: &port 80
                   periodSeconds: 10
                   timeoutSeconds: 5
                   failureThreshold: 3
