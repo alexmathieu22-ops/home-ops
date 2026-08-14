@@ -1,0 +1,22 @@
+# Copy to terraform.tfvars (gitignored) and fill in real values.
+
+# Dashboard -> My Profile -> API Tokens -> Create Token -- needs Zero Trust: Edit and
+# Zone: DNS: Edit, scoped to the specific zone. Broader than the DNS-only token used
+# for cert-manager, so keep it separate rather than reusing that one.
+cloudflare_api_token = "xxxxx"
+
+# Dashboard right sidebar on any zone overview page.
+cloudflare_account_id = "xxxxx"
+
+# Same zone ID already used in terraform/headscale/terraform.tfvars.
+cloudflare_zone_id = "xxxxx"
+
+# From `cloudflared tunnel list`, or a running pod's logs:
+#   kubectl logs -n networking -l app.kubernetes.io/name=cloudflared | grep tunnelID
+# Current home-ops tunnel ID, confirmed from the running pods' logs:
+tunnel_id = "xxxxx"
+
+domain = "alexandremathieu.com"
+
+# kubectl get svc -n networking -l gateway.envoyproxy.io/owning-gateway-name=external
+external_gateway_service = "envoy-networking-external-8c60613e.networking.svc.cluster.local"
