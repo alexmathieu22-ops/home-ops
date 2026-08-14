@@ -67,18 +67,18 @@ spec:
         ports:
           http:
             port: 3000
-      dns-udp:
+      # One Service for both protocols, not two -- a router's DNS server field is a single
+      # IP that needs to answer both UDP and TCP/53 (TCP is used for truncated/large
+      # responses). Two separate Services would each get their own LoadBalancer IP from
+      # Cilium's IPAM, breaking that.
+      dns:
         controller: main
         type: LoadBalancer
         ports:
-          dns:
+          udp:
             port: 53
             protocol: UDP
-      dns-tcp:
-        controller: main
-        type: LoadBalancer
-        ports:
-          dns:
+          tcp:
             port: 53
             protocol: TCP
     route:
