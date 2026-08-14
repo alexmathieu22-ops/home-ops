@@ -5,6 +5,14 @@ metadata:
 spec:
   externalIPs: true
   loadBalancerIPs: true
+  # ^en[0-9]+ only matches macOS-style names (en0, en1) -- this node's real interface is
+  # eno1 (Linux "predictable network interface names": eno=onboard, ens=slot, enp=PCI),
+  # which that regex never matched. Leader election succeeded regardless (a separate,
+  # interface-independent mechanism), so everything LOOKED healthy in `cilium-dbg status`
+  # while the l2-announce table silently stayed empty -- zero interfaces qualified, so
+  # nothing ever actually got announced via ARP. Confirmed via
+  # `kubectl exec -n kube-system ds/cilium -- cilium-dbg statedb dump` showing
+  # "l2-announce": []. Broadened to cover eno/ens/enp/en naming.
   interfaces:
     - ^eth[0-9]+
-    - ^en[0-9]+
+    - ^en[a-z0-9]+
