@@ -18,6 +18,10 @@ metadata:
   namespace: default
 spec:
   interval: 1h
+  # First boot (venv build + HA's own init) can take longer than Flux's 5m default wait --
+  # give it real headroom instead of Helm giving up mid-boot and remediating (uninstall +
+  # retry), which was compounding with the venv-rebuild-on-restart issue below.
+  timeout: 10m
   chartRef:
     kind: OCIRepository
     name: home-assistant
@@ -38,8 +42,22 @@ spec:
               tag: 2026.8.1
             env:
               TZ: America/Toronto
+            # Matches onedr0p's actual pattern (not buroa's, which shares the strict
+            # /healthz check across liveness AND readiness): liveness/startup are plain
+            # (no custom/type), which app-template renders as a bare TCP check against the
+            # primary port -- lenient, never kills the container just for still booting.
+            # Only readiness runs the strict /healthz check; failing it just withholds
+            # traffic, it doesn't restart anything. This is what avoided the crash loop my
+            # first attempt (custom httpGet on all three) hit: HA's first boot (venv
+            # build + init) took longer than the check assumed was "hung".
             probes:
-              liveness: &probes
+              liveness:
+                enabled: true
+                spec:
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+              readiness:
                 enabled: true
                 custom: true
                 spec:
@@ -49,23 +67,11 @@ spec:
                   periodSeconds: 10
                   timeoutSeconds: 5
                   failureThreshold: 5
-              readiness: *probes
-              # A bare TCP startup probe succeeds the moment the port opens, well before
-              # HA has actually finished first-boot init (creating its default config,
-              # venv, etc.) -- that handed control to liveness/readiness too early, which
-              # then killed the container on a 404 from a still-initializing /healthz,
-              # every restart, forever. Using the same httpGet check here instead means
-              # kubelet won't hand off until the app is genuinely ready.
               startup:
                 enabled: true
-                custom: true
                 spec:
-                  httpGet:
-                    path: /healthz
-                    port: *port
-                  periodSeconds: 10
-                  timeoutSeconds: 5
                   failureThreshold: 30
+                  periodSeconds: 10
             securityContext:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: true
@@ -90,9 +96,12 @@ spec:
         ports:
           http:
             port: *port
-    # config is the only real persistent data; .venv/logs/tts/tmp are regenerable, so they
-    # live on a separate emptyDir layered over /config via subPath mounts rather than
-    # growing the persistent volume with disposable data (same split buroa uses).
+    # .venv stays on the persistent config PVC, NOT on scratch/emptyDir like buroa's
+    # reference does -- rebuilding a Python venv from scratch is genuinely slow, and
+    # putting it on ephemeral storage meant every crash-restart paid that cost again,
+    # compounding with the probe-timing bug above into a self-defeating crash loop
+    # (crash -> rebuild venv -> probably crash again before it finishes -> repeat).
+    # logs/tts/tmp are still fine as disposable scratch space.
     persistence:
       config:
         type: persistentVolumeClaim
@@ -106,8 +115,6 @@ spec:
         advancedMounts:
           home-assistant:
             app:
-              - path: /config/.venv
-                subPath: venv
               - path: /config/logs
                 subPath: logs
               - path: /config/tts
