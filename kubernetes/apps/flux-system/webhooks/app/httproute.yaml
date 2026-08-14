@@ -5,6 +5,16 @@ kind: HTTPRoute
 metadata:
   name: flux-webhook
   namespace: flux-system
+  annotations:
+    # gatus-sidecar's default condition is [STATUS] == 200, but this route has no path
+    # match, so it auto-derives a bare-host URL (/) -- notification-controller's receiver
+    # only serves /hook/<token>, so root reliably 404s. That 404 IS "healthy" here: it
+    # means the receiver is up and routing correctly, just hit on the wrong path. Confirmed
+    # via curl: root -> 404, the real /hook/<token> path -> 400 (also not 200, since GET
+    # without a valid GitHub payload/signature is expected to be rejected).
+    gatus.home-operations.com/endpoint: |
+      conditions:
+        - "[STATUS] == 404"
 spec:
   hostnames:
     - "flux-webhook.alexandremathieu.com"
