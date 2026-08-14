@@ -86,19 +86,23 @@ wildcard entry pointing at the `external` Envoy Gateway
 (`kubernetes/apps/networking/envoy-gateway/config/gateway-external.yaml`) — every public
 app after this is just an `HTTPRoute` committed to git, no dashboard step required.
 
-Zero Trust dashboard → **Networks** → **Tunnels** → `home-ops` → **Public Hostname** tab →
-add ONE entry:
+Managed by `terraform/cloudflare-tunnel` (the tunnel's ingress config + the wildcard DNS
+record), not the dashboard — it references the tunnel created in step 2 by ID rather than
+owning the tunnel resource itself, so it doesn't touch the token already in 1Password:
 
-- Hostname: `*.alexandremathieu.com`
-- Service: `http://<external Gateway's Service>.networking.svc.cluster.local` — the exact
-  auto-generated Service name isn't predictable ahead of time; find it with:
-  ```bash
-  kubectl get svc -n networking -l gateway.envoyproxy.io/owning-gateway-name=external
-  ```
+```bash
+cd terraform/cloudflare-tunnel
+cp terraform.tfvars.example terraform.tfvars   # fill in the real values
+tofu init
+tofu apply
+```
 
-This is still a one-time manual step (not committed to git — that's inherent to how
-Cloudflare Tunnel's remote-managed ingress works, this repo isn't using the
-fully-local-config alternative), but it's the *only* one now — do it once, then every new
-public app is `kubernetes/apps/<namespace>/<app>/app/httproute.yaml` +
+`external_gateway_service` in `terraform.tfvars` isn't stable across Gateway recreation
+(Envoy Gateway derives the Service name from the Gateway's UID) — re-check it with
+`kubectl get svc -n networking -l gateway.envoyproxy.io/owning-gateway-name=external` and
+update `terraform.tfvars` if it ever drifts.
+
+Once applied, that's the *only* manual/apply step — every new public app after this is
+just `kubernetes/apps/<namespace>/<app>/app/httproute.yaml` +
 `hostnames: ["whatever.alexandremathieu.com"]`, same as internal apps already work
 against the `internal` Gateway.

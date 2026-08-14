@@ -111,6 +111,14 @@ addition (see `docs/runbooks/cloudflare-setup.md`). The Gateway API CRDs themsel
 (`kubernetes/apps/networking/gateway-api-crds`) are a separate upstream project — neither
 Cilium (CNI/LB-IPAM/L2 only) nor the Envoy Gateway Helm chart install them.
 
+That static public-hostname entry and its wildcard DNS record are managed by
+`terraform/cloudflare-tunnel`, not clicked in by hand — it references the tunnel (created
+via `cloudflared tunnel create`) by ID rather than owning the tunnel resource itself, since
+recreating that resource in Terraform would mint a new token and force re-wiring the
+1Password item + a cloudflared rollout for no benefit. Same rationale as `terraform/headscale`
+being its own root module rather than folded into one big `terraform/` state: independent
+lifecycles, independent blast radius.
+
 **AdGuard Home** (`kubernetes/apps/networking/adguard-home`): exists purely to make the
 internal Gateway's wildcard hostname resolvable -- the ISP-provided Nokia router has no
 local-DNS-record capability at all (confirmed against Nokia's own docs). Deliberately not
