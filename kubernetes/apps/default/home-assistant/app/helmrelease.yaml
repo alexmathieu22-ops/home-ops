@@ -96,12 +96,13 @@ spec:
         ports:
           http:
             port: *port
-    # .venv stays on the persistent config PVC, NOT on scratch/emptyDir like buroa's
-    # reference does -- rebuilding a Python venv from scratch is genuinely slow, and
-    # putting it on ephemeral storage meant every crash-restart paid that cost again,
-    # compounding with the probe-timing bug above into a self-defeating crash loop
-    # (crash -> rebuild venv -> probably crash again before it finishes -> repeat).
-    # logs/tts/tmp are still fine as disposable scratch space.
+    # .venv back on scratch/emptyDir, matching buroa's actual pattern -- tried moving it
+    # onto the persistent config PVC to avoid rebuilding it on every restart, but
+    # local-path's PVC directory isn't chowned to uid 1000 the way emptyDir is
+    # ("Permission denied" writing .venv/CACHEDIR.TAG), unlike emptyDir which gets correct
+    # fsGroup ownership automatically. Reverted rather than fight local-path's permission
+    # model. This is fine now that liveness/startup are lenient (see probes comment
+    # above) -- a restart means a slow venv rebuild, not a crash loop.
     persistence:
       config:
         type: persistentVolumeClaim
@@ -115,6 +116,8 @@ spec:
         advancedMounts:
           home-assistant:
             app:
+              - path: /config/.venv
+                subPath: venv
               - path: /config/logs
                 subPath: logs
               - path: /config/tts
