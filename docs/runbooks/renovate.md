@@ -23,13 +23,20 @@ they're green.
 
 ## Prerequisites
 
-- [ ] A GitHub App created at <https://github.com/settings/apps/new>, webhook disabled,
-      with repository permissions: Contents (R&W), Pull requests (R&W), Issues (R&W),
-      Checks (R&W), Commit statuses (R&W), Workflows (R&W), Metadata (Read) — installed
-      only on this repo
-- [ ] Its Client ID and a generated private key, stored in the `home-ops` 1Password
-      vault as an item named `github-bot` (fields `GITHUB_BOT_APP_CLIENT_ID` and
-      `GITHUB_BOT_APP_PRIVATE_KEY`)
+- [ ] A GitHub App created and its credentials stored in 1Password — run
+      [`scripts/register-renovate-github-app.sh`](../../scripts/register-renovate-github-app.sh).
+      It registers the app via GitHub's
+      [manifest flow](https://docs.github.com/en/apps/sharing-github-apps/registering-a-github-app-from-a-manifest)
+      (pre-filled permissions: Contents/Pull requests/Issues/Checks/Commit
+      statuses/Workflows write, Metadata read; webhook disabled) and writes the
+      resulting Client ID + private key straight into the `home-ops` 1Password vault
+      as an item named `github-bot` (`GITHUB_BOT_APP_CLIENT_ID` /
+      `GITHUB_BOT_APP_PRIVATE_KEY`) — neither value is ever printed to the terminal.
+      The one step it can't automate away: GitHub requires you to personally review
+      and click "Create GitHub App" in your own logged-in browser, so the script opens
+      that page and waits for the redirect back. It prints the app's install URL last;
+      installing it on this repo is a separate manual click the manifest flow doesn't
+      cover.
 - [ ] A **separate** 1Password Service Account, scoped read-only to that one item (don't
       reuse the cluster's ESO service account from
       [secret-zero](secret-zero.md) — keep CI's blast radius independent of the
