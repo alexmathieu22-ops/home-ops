@@ -66,9 +66,10 @@ MANIFEST_JSON=$(jq -n \
       statuses: "write",
       workflows: "write",
       metadata: "read"
-    },
-    hook_attributes: { active: false }
+    }
   }')
+# hook_attributes is omitted entirely -- including it without a url (even just
+# {active: false}) fails GitHub's manifest validation with "url wasn't supplied".
 
 HTML_FILE="$WORKDIR/register.html"
 MANIFEST_ESCAPED=$(printf '%s' "$MANIFEST_JSON" | sed "s/'/\&apos;/g")
