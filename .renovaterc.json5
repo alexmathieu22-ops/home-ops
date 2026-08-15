@@ -1,0 +1,10 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: [
+    "github>home-operations/renovate-presets#7.0.0",
+    ":timezone(America/Toronto)",
+    "github>alexmathieu22/home-ops//.renovate/automerge.json5",
+    "github>alexmathieu22/home-ops//.renovate/grouping.json5",
+    "github>alexmathieu22/home-ops//.renovate/labels.json5",
+  ],
+}
