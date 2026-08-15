@@ -32,6 +32,13 @@ if ! op whoami >/dev/null 2>&1; then
   echo "then re-run this script." >&2
   exit 1
 fi
+if op whoami 2>/dev/null | grep -q SERVICE_ACCOUNT; then
+  echo "Signed in as a 1Password service account, which is typically read-only." >&2
+  echo "This script needs write access to create the 1Password item. Run:" >&2
+  echo "  unset OP_SERVICE_ACCOUNT_TOKEN && eval \$(op signin)" >&2
+  echo "to switch to your personal account, then re-run this script." >&2
+  exit 1
+fi
 echo "Signed in to 1Password."
 
 if ! op vault get "$VAULT" >/dev/null 2>&1; then
