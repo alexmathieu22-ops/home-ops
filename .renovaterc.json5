@@ -7,4 +7,9 @@
     "github>alexmathieu22/home-ops//.renovate/grouping.json5",
     "github>alexmathieu22/home-ops//.renovate/labels.json5",
   ],
+  // rebaseWhen defaults to "auto", which only proactively rebases PRs that have
+  // automerge enabled; everything else only rebases on conflict. Since main requires
+  // branches to be up to date before merging, non-automerge PRs would otherwise go
+  // stale every time something else merges and need a manual "Update branch" click.
+  rebaseWhen: "behind-base-branch",
 }
