@@ -69,3 +69,17 @@ spec:
     # not Cilium's own implementation.
     gatewayAPI:
       enabled: false
+
+    # Default kube-proxy-replacement translates Service IPs to backends at the
+    # connect()/sendmsg() socket hook -- only fires for a genuinely local process
+    # opening a new connection. Traffic forwarded THROUGH a pod (e.g. the tailscale
+    # subnet router routing a VPN client's packet onward) never makes that syscall,
+    # so it fell through with no translation at all: NodePort access got refused and
+    # the LoadBalancer/L2-announced IP hairpinned trying to ARP itself over the LAN
+    # NIC. Scoping socket LB to the host namespace re-enables the tc/veth-level
+    # fallback for every pod namespace, which does handle forwarded packets. Matches
+    # onedr0p/home-ops's own cilium HelmRelease (same rationale, undocumented there
+    # too) -- see docs.cilium.io kube-proxy-free page, "Socket LoadBalancer Bypass".
+    socketLB:
+      enabled: true
+      hostNamespaceOnly: true
