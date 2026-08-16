@@ -12,3 +12,33 @@ spec:
     kind: GitRepository
     name: flux-system
   path: ./kubernetes/apps
+  patches:
+    - # Force-replace CRDs on every HelmRelease install/upgrade -- Helm's native crds/
+      # dir is install-only by default, so charts that bundle CRDs there (e.g.
+      # envoy-gateway) never get schema updates on upgrade. See IMPLEMENTATION_NOTES.md.
+      # HelmReleases live under each component's own `app/` path, outside this
+      # Kustomization's build tree, so this patches every child Kustomization instead,
+      # injecting the HelmRelease patch into each one's own `spec.patches`.
+      patch: |-
+        apiVersion: kustomize.toolkit.fluxcd.io/v1
+        kind: Kustomization
+        metadata:
+          name: _
+        spec:
+          patches:
+            - patch: |-
+                apiVersion: helm.toolkit.fluxcd.io/v2
+                kind: HelmRelease
+                metadata:
+                  name: _
+                spec:
+                  install:
+                    crds: CreateReplace
+                  upgrade:
+                    crds: CreateReplace
+              target:
+                group: helm.toolkit.fluxcd.io
+                kind: HelmRelease
+      target:
+        group: kustomize.toolkit.fluxcd.io
+        kind: Kustomization
