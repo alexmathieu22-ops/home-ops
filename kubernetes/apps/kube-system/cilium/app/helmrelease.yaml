@@ -69,10 +69,3 @@ spec:
     # not Cilium's own implementation.
     gatewayAPI:
       enabled: false
-
-    hubble:
-      enabled: true
-      relay:
-        enabled: true
-      ui:
-        enabled: false
