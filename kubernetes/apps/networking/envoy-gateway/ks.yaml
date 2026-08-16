@@ -11,8 +11,6 @@ spec:
   prune: true
   wait: true
   targetNamespace: networking
-  dependsOn:
-    - name: rook-ceph-cluster
   sourceRef:
     kind: GitRepository
     name: flux-system
