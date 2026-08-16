@@ -8,27 +8,34 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "home_ops" {
   account_id = var.cloudflare_account_id
   tunnel_id  = var.tunnel_id
 
-  config {
-    ingress_rule {
-      hostname = "*.${var.domain}"
-      service  = "http://${var.external_gateway_service}"
-    }
-
-    # Required catch-all: the last rule must match everything (no hostname/path).
-    ingress_rule {
-      service = "http_status:404"
-    }
+  config = {
+    ingress = [
+      {
+        hostname = "*.${var.domain}"
+        service  = "http://${var.external_gateway_service}"
+      },
+      # Required catch-all: the last rule must match everything (no hostname/path).
+      {
+        service = "http_status:404"
+      }
+    ]
   }
 }
 
 # ONE wildcard CNAME covers every current and future *.${var.domain} app -- matches
 # the "one dashboard entry, then just commit an HTTPRoute" convention documented in
 # docs/runbooks/cloudflare-setup.md.
-resource "cloudflare_record" "tunnel_wildcard" {
+resource "cloudflare_dns_record" "tunnel_wildcard" {
   zone_id = var.cloudflare_zone_id
   name    = "*"
   type    = "CNAME"
   content = "${var.tunnel_id}.cfargotunnel.com"
   proxied = true
   ttl     = 1 # must be 1 (automatic) when proxied
+}
+
+# cloudflare_record was renamed to cloudflare_dns_record in the v5 provider.
+moved {
+  from = cloudflare_record.tunnel_wildcard
+  to   = cloudflare_dns_record.tunnel_wildcard
 }
