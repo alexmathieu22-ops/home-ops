@@ -10,7 +10,7 @@
 # script opens that page for you and waits for the redirect back.
 set -euo pipefail
 
-APP_NAME="alex-bot"
+APP_NAME="alex-trend-bot"
 REPO_URL="https://github.com/alexmathieu22/home-ops"
 VAULT="home-ops"
 ITEM_TITLE="github-bot"
