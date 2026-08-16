@@ -37,33 +37,13 @@ spec:
       #   enabled: true
       # dashboards:          # no grafana yet
       #   enabled: true
+    # rollOutCiliumPods: true  # multi-node only
 
     # Talos: cgroups are already mounted, Cilium must not try to remount them.
     cgroup:
       autoMount:
         enabled: false
       hostRoot: /sys/fs/cgroup
-
-    securityContext:
-      capabilities:
-        ciliumAgent:
-          - CHOWN
-          - KILL
-          - NET_ADMIN
-          - NET_RAW
-          - IPC_LOCK
-          - SYS_ADMIN
-          - SYS_RESOURCE
-          - DAC_OVERRIDE
-          - FOWNER
-          - SETGID
-          - SETUID
-          # - PERFMON  # BIG TCP/bandwidthManager only, unused
-          # - BPF      # same
-        cleanCiliumState:
-          - NET_ADMIN
-          - SYS_ADMIN
-          - SYS_RESOURCE
 
     # LB-IPAM + L2 announcements — this is the MetalLB replacement (see
     # ippool.yaml / l2announcementpolicy.yaml for the actual pool/policy).
@@ -106,7 +86,9 @@ spec:
     # not Cilium's own implementation.
     gatewayAPI:
       enabled: false
-    envoy:              # Cilium's own L7 proxy, unused (see gatewayAPI above)
+    envoy: # Cilium's own L7 proxy, unused (see gatewayAPI above)
+      enabled: false
+    hubble: # not using flow visibility yet
       enabled: false
 
     # prometheus:          # no prometheus stack yet
@@ -116,10 +98,27 @@ spec:
     #     trustCRDsExist: true
     # dashboards:          # no grafana yet
     #   enabled: true
-    # rollOutCiliumPods: true  # multi-node only
 
-    hubble:             # not using flow visibility yet
-      enabled: false
+    securityContext:
+      capabilities:
+        ciliumAgent:
+          - CHOWN
+          - KILL
+          - NET_ADMIN
+          - NET_RAW
+          - IPC_LOCK
+          - SYS_ADMIN
+          - SYS_RESOURCE
+          - DAC_OVERRIDE
+          - FOWNER
+          - SETGID
+          - SETUID
+          # - PERFMON  # BIG TCP/bandwidthManager only, unused
+          # - BPF      # same
+        cleanCiliumState:
+          - NET_ADMIN
+          - SYS_ADMIN
+          - SYS_RESOURCE
 
     # fixes forwarded (non-socket) traffic e.g. tailscale subnet router
     socketLB:
