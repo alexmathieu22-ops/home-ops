@@ -37,7 +37,6 @@ spec:
       current: status.conditions.filter(e, e.type == 'Programmed').all(e, e.status == 'True')
   dependsOn:
     - name: envoy-gateway
-    - name: gateway-api-crds
   sourceRef:
     kind: GitRepository
     name: flux-system

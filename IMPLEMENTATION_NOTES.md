@@ -107,9 +107,20 @@ in-cluster, by cloudflared, so a LoadBalancer would needlessly burn one of the f
 Cilium's LB-IPAM pool and expose it on the LAN for no reason. cloudflared gets ONE static
 public-hostname entry (`*.alexandremathieu.com` → the external Gateway's Service) instead
 of one dashboard entry per app; every future public app is then just an `HTTPRoute`
-addition (see `docs/runbooks/cloudflare-setup.md`). The Gateway API CRDs themselves
-(`kubernetes/apps/networking/gateway-api-crds`) are a separate upstream project — neither
-Cilium (CNI/LB-IPAM/L2 only) nor the Envoy Gateway Helm chart install them.
+addition (see `docs/runbooks/cloudflare-setup.md`). The Gateway API CRDs are NOT a
+separate component here (Cilium only does CNI/LB-IPAM/L2, it doesn't install them) —
+`envoy-gateway`'s `gateway-helm` chart bundles both Envoy Gateway's own CRDs and the
+Gateway API experimental-channel CRDs via a `crds` subchart dependency
+(`values.crds.enabled: true`, the chart default; see
+[gateway-helm/charts/crds](https://github.com/envoyproxy/gateway/tree/main/charts/gateway-crds-helm)),
+installed through Helm's native `crds/` directory convention. That convention only
+installs CRDs on first `helm install` and never touches them again on `helm upgrade` —
+the root `apps` Kustomization (`kubernetes/flux/cluster/sync.yaml`) works around this with
+a nested patch (patches every child Kustomization, which in turn patches every
+HelmRelease it creates) setting `install.crds`/`upgrade.crds: CreateReplace`, so CRD
+schemas actually keep up with chart upgrades cluster-wide (same pattern as
+onedr0p/home-ops). This also fixes a documented Helm limitation with large CRDs living in
+`templates/` rather than the native dir (helm/helm#12277).
 
 That static public-hostname entry and its wildcard DNS record are managed by
 `terraform/cloudflare-tunnel`, not clicked in by hand — it references the tunnel (created

@@ -15,6 +15,10 @@ spec:
     remediation:
       retries: 3
   values:
+    # Chart-bundled CRDs (Envoy Gateway's own + Gateway API experimental channel) via
+    # Helm's native crds/ dir -- see IMPLEMENTATION_NOTES.md.
+    crds:
+      enabled: true
     config:
       envoyGateway:
         provider:
