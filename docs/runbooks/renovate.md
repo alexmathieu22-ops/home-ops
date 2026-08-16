@@ -23,29 +23,85 @@ they're green.
 
 ## Prerequisites
 
-- [ ] A GitHub App created and its credentials stored in 1Password — run
-      [`scripts/register-renovate-github-app.sh`](../../scripts/register-renovate-github-app.sh).
-      It registers the app via GitHub's
-      [manifest flow](https://docs.github.com/en/apps/sharing-github-apps/registering-a-github-app-from-a-manifest)
-      (pre-filled permissions: Contents/Pull requests/Issues/Checks/Commit
-      statuses/Workflows write, Metadata read; webhook disabled) and writes the
-      resulting Client ID + private key straight into the `home-ops` 1Password vault
-      as an item named `github-bot` (`GITHUB_BOT_APP_CLIENT_ID` /
-      `GITHUB_BOT_APP_PRIVATE_KEY`) — neither value is ever printed to the terminal.
-      The one step it can't automate away: GitHub requires you to personally review
-      and click "Create GitHub App" in your own logged-in browser, so the script opens
-      that page and waits for the redirect back. It prints the app's install URL last;
-      installing it on this repo is a separate manual click the manifest flow doesn't
-      cover.
-- [ ] A **separate** 1Password Service Account, scoped read-only to that one item (don't
-      reuse the cluster's ESO service account from
-      [secret-zero](secret-zero.md) — keep CI's blast radius independent of the
-      cluster's)
-- [ ] That service account's token stored as the `OP_SERVICE_ACCOUNT_TOKEN` repo secret
-      (`gh secret set OP_SERVICE_ACCOUNT_TOKEN`)
-- [ ] Branch protection on `main` requiring the `Validate Kubernetes manifests` and
-      `Validate talhelper config` checks, and "Allow auto-merge" enabled on the repo —
-      without a required check, automerge has nothing to gate on
+All of these are one-time setup, already done for this repo — kept here so the same
+sequence is reproducible if the bot's credentials ever need rotating or this pattern gets
+reused on another repo.
+
+### 1. Register the GitHub App
+
+```bash
+./scripts/register-renovate-github-app.sh
+```
+
+Registers the app via GitHub's
+[manifest flow](https://docs.github.com/en/apps/sharing-github-apps/registering-a-github-app-from-a-manifest)
+(pre-filled permissions: Contents/Pull requests/Issues/Checks/Commit statuses/Workflows
+write, Metadata read; webhook disabled) and writes the resulting Client ID + private key
+straight into the `home-ops` 1Password vault as an item named `github-bot`
+(`GITHUB_BOT_APP_CLIENT_ID` / `GITHUB_BOT_APP_PRIVATE_KEY`) — neither value is ever
+printed to the terminal. It refuses to run if `op` is authenticated as a service account
+(read-only, can't write the item) instead of a personal account.
+
+The one step it can't automate away: GitHub requires you to personally review and click
+"Create GitHub App" in your own logged-in browser, so the script opens that page and
+waits for the redirect back. It prints the app's install URL last — installing it on this
+repo is a separate manual click the manifest flow doesn't cover.
+
+If it fails after the app is already created on GitHub's side (e.g. the 1Password write
+fails), don't re-run the script — it'll try to create a second app with the same name.
+Instead generate a new private key from the app's own settings page
+(`https://github.com/settings/apps/<slug>` → Private keys → "Generate a private key") and
+store it by hand:
+
+```bash
+op item create --vault home-ops --category "API Credential" --title github-bot \
+  "GITHUB_BOT_APP_CLIENT_ID[text]=<client id from the app's General page>" \
+  "GITHUB_BOT_APP_PRIVATE_KEY[text]=$(cat ~/Downloads/<slug>.*.private-key.pem)"
+```
+
+### 2. A separate, CI-scoped 1Password service account
+
+Don't reuse the cluster's ESO service account from [secret-zero](secret-zero.md) — keep
+CI's blast radius independent of the cluster's. `op service-account create` scopes at the
+vault level only (no per-item granularity), so this grants read-only access to everything
+in `home-ops`, not just `github-bot` — still a separate, independently-revocable,
+read-only credential from ESO's. For tighter isolation, move `github-bot` into its own
+vault first and scope to that instead.
+
+```bash
+unset OP_SERVICE_ACCOUNT_TOKEN   # make sure this runs under your personal account
+eval $(op signin)
+
+op service-account create renovate-ci --vault home-ops:read_items --raw \
+  | gh secret set OP_SERVICE_ACCOUNT_TOKEN --repo alexmathieu22/home-ops
+```
+
+The token is piped directly into the GitHub secret and never displayed.
+
+### 3. Repo settings so automerge has something to gate on
+
+```bash
+gh api repos/alexmathieu22/home-ops --method PATCH -f allow_auto_merge=true
+
+gh api repos/alexmathieu22/home-ops/branches/main/protection \
+  --method PUT \
+  --input - <<'JSON'
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": ["Validate Kubernetes manifests", "Validate talhelper config"]
+  },
+  "enforce_admins": false,
+  "required_pull_request_reviews": null,
+  "restrictions": null,
+  "allow_force_pushes": false,
+  "allow_deletions": false
+}
+JSON
+```
+
+No required reviews (solo repo) — just the two CI jobs from `ci.yaml`. Without a required
+check, `automerge: true` has nothing to wait on.
 
 ## Config layout
 
