@@ -39,6 +39,16 @@ spec:
             # --login-server via TS_EXTRA_ARGS, not TS_LOGIN_SERVER -- see IMPLEMENTATION_NOTES.md.
             - name: TS_EXTRA_ARGS
               value: --login-server=https://headscale.alexandremathieu.com
+            # Talos's kernel ships no legacy iptables netfilter modules at all (confirmed:
+            # /lib/modules/<ver>/kernel/net/netfilter doesn't exist) -- containerboot's
+            # default iptables-legacy backend fails outright ("Table does not exist") and
+            # never sets up the MASQUERADE rule subnet routing needs. Talos's own kernel
+            # does support nftables natively (its own declarative firewall uses it), and
+            # this image's iptables-nft/xtables-nft-multi backend works against it --
+            # confirmed live: `nft list ruleset` shows the ts-postrouting masquerade rule
+            # correctly installed and matching packets after setting this.
+            - name: TS_DEBUG_FIREWALL_MODE
+              value: nftables
           securityContext:
             capabilities:
               add:
