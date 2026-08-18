@@ -2,12 +2,12 @@
 # the local dev cluster (talosctl cluster create docker generates its own config, see
 # docs/runbooks/cluster-bootstrap.md) -- this is the real-hardware source of truth.
 #
-# Current setup: a single HP ProDesk 600 G4 Mini (i5-8500T, 8GB RAM, 256GB SSD), running
-# single-node. When more nodes are added later, append them to the `nodes:` block below;
-# nothing else in this file needs to change -- allowSchedulingOnControlPlanes is already
-# required for single-node scheduling and stays harmless once more nodes exist.
+# Current setup: home-ops-1, a single HP ProDesk 600 G4 Mini (i5-8500T, 8GB RAM, 256GB
+# SSD), as the sole control-plane node, plus home-ops-2, an Asus VivoBook S510U repurposed
+# as a worker-only node (see its `nodes:` entry below for why it's worker rather than
+# control-plane). When more nodes are added later, append them to the `nodes:` block below.
 #
-# Known caveats from this specific box, tracked here rather than silently ignored:
+# Known caveats from the ProDesk (home-ops-1), tracked here rather than silently ignored:
 #   - 8GB RAM is on the low side for the full stack. Expect to feel this once Rook-Ceph +
 #     observability + a couple of apps are all running. HP ProDesk 600 G4 Mini takes 2x
 #     DDR4 SODIMM up to 32GB total; a cheap RAM upgrade is the easiest lever if things get
@@ -23,15 +23,15 @@ clusterName: home-ops
 talosVersion: v1.13.8
 kubernetesVersion: v1.36.3
 
-# No LB/VIP in front of the control plane -- moot with one node anyway, and even once
-# node 2/3 exist this repo hasn't added a VIP (not in scope per PROJECT_BRIEF.md). Points
-# at the control-plane node directly; talhelper adds every node in `nodes:` to the
-# generated talosconfig's `nodes:` list for talosctl access regardless.
+# No LB/VIP in front of the control plane -- still a single control-plane node (home-ops-2
+# is worker-only, see its `nodes:` entry), so this repo hasn't added a VIP (not in scope
+# per PROJECT_BRIEF.md). Points at the control-plane node directly; talhelper adds every
+# node in `nodes:` to the generated talosconfig's `nodes:` list for talosctl access
+# regardless.
 endpoint: https://192.168.18.39:6443
 
-# Single node must schedule regular workloads too (no dedicated worker capacity yet).
-# All nodes run as control-plane (HA etcd, no node purely dedicated to control-plane) --
-# stays true once more nodes are added.
+# home-ops-1 is still the only control-plane node, so it must keep scheduling regular
+# workloads too -- home-ops-2's worker capacity is additive, not a replacement for this.
 allowSchedulingOnControlPlanes: true
 
 # Cilium is installed via Flux HelmRelease (kubernetes/apps/kube-system/cilium), not
@@ -39,37 +39,39 @@ allowSchedulingOnControlPlanes: true
 cniConfig:
   name: none
 
-controlPlane:
-  patches:
-    # Cilium replaces kube-proxy (kube-proxy-replacement); Talos must not install it.
-    - |-
-      cluster:
-        proxy:
-          disabled: true
-    # cloudflared's QUIC transport needs bigger UDP buffers than the kernel default
-    # (observed warning: "wanted: 7168 kiB, got: 416 kiB", causing periodic reconnects).
-    - |-
-      machine:
-        sysctls:
-          net.core.rmem_max: "67108864"
-          net.core.wmem_max: "67108864"
-    # Required for local-path-provisioner PVCs to mount: repoints the provisioner's data
-    # path at /var (Talos's root filesystem is read-only, only /var persists), and tells
-    # the kubelet to bind-mount that path into pods -- without this, PVCs report a
-    # healthy StorageClass but fail to actually mount. Re-apply machine config after this
-    # changes (`talhelper gencommand apply` / `talosctl apply-config`) -- Flux can't push
-    # this.
-    - |-
-      machine:
-        kubelet:
-          extraMounts:
-            - destination: /var/local-path-provisioner
-              type: bind
-              source: /var/local-path-provisioner
-              options:
-                - bind
-                - rshared
-                - rw
+# Applies to every node regardless of role (control-plane or worker) -- kept at the
+# top level rather than under `controlPlane:` now that home-ops-2 (worker) exists too,
+# since pods needing these (cloudflared, local-path-provisioner PVCs) can land on either.
+patches:
+  # Cilium replaces kube-proxy (kube-proxy-replacement); Talos must not install it.
+  - |-
+    cluster:
+      proxy:
+        disabled: true
+  # cloudflared's QUIC transport needs bigger UDP buffers than the kernel default
+  # (observed warning: "wanted: 7168 kiB, got: 416 kiB", causing periodic reconnects).
+  - |-
+    machine:
+      sysctls:
+        net.core.rmem_max: "67108864"
+        net.core.wmem_max: "67108864"
+  # Required for local-path-provisioner PVCs to mount: repoints the provisioner's data
+  # path at /var (Talos's root filesystem is read-only, only /var persists), and tells
+  # the kubelet to bind-mount that path into pods -- without this, PVCs report a
+  # healthy StorageClass but fail to actually mount. Re-apply machine config after this
+  # changes (`talhelper gencommand apply` / `talosctl apply-config`) -- Flux can't push
+  # this.
+  - |-
+    machine:
+      kubelet:
+        extraMounts:
+          - destination: /var/local-path-provisioner
+            type: bind
+            source: /var/local-path-provisioner
+            options:
+              - bind
+              - rshared
+              - rw
 
 nodes:
   # HP ProDesk 600 G4 Mini. Real LAN is 192.168.18.0/24 (confirmed from the node's own
@@ -89,3 +91,24 @@ nodes:
     installDiskSelector:
       size: ">= 100GB"
     controlPlane: true
+
+  # Asus VivoBook S510U, repurposed as a worker node. No built-in Ethernet -- connects via
+  # an Anker A8303 USB-C hub's RJ45 port (Realtek RTL8153-family chipset, covered by
+  # Talos's default r8152 driver, no system extension needed). IP is reserved for the
+  # adapter's MAC in the router's DHCP settings, same reasoning as home-ops-1.
+  #
+  # controlPlane: false (worker-only) is deliberate, not "for now and I forgot to revisit":
+  # a 2-node etcd cluster is worse than 1-node (needs a strict majority of 2/2 to stay
+  # writable, so losing either member takes down the control plane -- no fault tolerance
+  # gained). Only promote this to controlPlane: true once a 3rd node exists.
+  #
+  # installDiskSelector uses `model` rather than `size` (unlike home-ops-1): this laptop
+  # has two real disks -- a 1TB Toshiba MQ04ABF1 HDD (/dev/sda) and a 256GB Micron SSD
+  # (/dev/sdb), confirmed via `talosctl get disks -n 192.168.18.41 --insecure` -- so a bare
+  # size filter would be ambiguous. Installing to the SSD; the spare 1TB HDD is a candidate
+  # for Rook-Ceph OSD storage later (see home-ops-1's caveat above about having none).
+  - hostname: home-ops-2
+    ipAddress: 192.168.18.41
+    installDiskSelector:
+      model: Micron_1100_MTFD
+    controlPlane: false
