@@ -57,6 +57,17 @@ spec:
               tag: v5.36.0
             env:
               GATUS_CONFIG_PATH: /config
+              # Native sidecars are only guaranteed to have STARTED before the main
+              # container begins, not to have finished their first sync -- gatus-sidecar
+              # and app were observed starting in the same wall-clock second, so app's
+              # initial config load ran before gatus-sidecar.yaml existed. That race
+              # doesn't self-heal: Gatus's 30s hot-reload check compares file mtimes with
+              # whole-second precision, so a file written in the same second as startup
+              # looks "not newer" forever. GATUS_DELAY_START_SECONDS sleeps at the very
+              # top of main(), before the initial config load, giving gatus-sidecar's
+              # first write (sub-second in practice) time to land first -- same fix
+              # buroa/k8s-gitops uses upstream.
+              GATUS_DELAY_START_SECONDS: 5
             # Gatus's web port is set via config.yaml's web.port (resources/config.yaml),
             # not an env var -- GATUS_WEB_PORT doesn't exist and was silently ignored
             # (verified: image always binds 8080 regardless). This anchor just keeps the
