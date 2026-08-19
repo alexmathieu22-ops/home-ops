@@ -1,4 +1,13 @@
+# Privileged PodSecurity scoped to this namespace only, for the mon/osd/csi daemons'
+# hostPath volume needs (ceph-daemons-sock-dir, rook-ceph-log, rook-ceph-crash,
+# ceph-daemon-data) -- same pattern as kubernetes/apps/vpn/namespace.yaml. Without this,
+# Talos's cluster-wide baseline PSA default blocks mon/osd pod creation outright
+# ("violates PodSecurity baseline:latest: hostPath volumes").
 apiVersion: v1
 kind: Namespace
 metadata:
   name: rook-ceph
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged
