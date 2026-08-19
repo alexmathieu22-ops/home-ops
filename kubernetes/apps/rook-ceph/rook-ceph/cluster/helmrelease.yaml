@@ -1,26 +1,14 @@
-# HARDWARE CAVEAT (unresolved, flagging rather than silently guessing): HARDWARE_PLAN.md
-# has each of the 3 Beelink EQ12 Pro nodes carrying OS + app-state on a *single* 500GB
-# NVMe. Rook-Ceph's normal/recommended topology is a dedicated raw block device per node
-# for OSDs -- it will only claim genuinely free/unpartitioned disk space, so at worst this
-# comes up with zero usable OSDs (not destructive to the Talos install) rather than
-# fighting the OS for its disk, but it means Ceph needs either a second small NVMe/USB
-# SSD per node, a free unpartitioned slice of the existing NVMe, or accepting
-# directory-based OSDs (discouraged/lower-reliability in modern Rook). Decide this before
-# buying hardware -- HARDWARE_PLAN.md doesn't currently budget for a second disk.
-# Same reason this can't be validated on the local dev cluster: Docker-provisioned Talos
-# nodes have no raw block devices available either, so CephCluster will likely stay
-# unhealthy there -- that's expected, not a bug (see README.md's local-cluster caveats).
-#
-# CURRENT REAL HARDWARE: the node (HP ProDesk 600 G4 Mini) has one 256GB disk, entirely
-# consumed by the Talos install, zero spare block device. Expect this HelmRelease's
-# CephCluster to sit unhealthy with 0 OSDs until a second disk (USB3 SSD via the box's
-# Type-C port is the easiest option) is attached. Separately: `cephBlockPools` below is
-# `replicated.size: 3` -- with a single node (and likely a single OSD once one exists),
-# Ceph can never place 3 replicas, so the pool will also stay unhealthy even after adding
-# one disk. Not fixed here yet since it doesn't block anything else in the dependency
-# chain -- either leave this Kustomization unreconciled until more nodes exist, or drop
-# `replicated.size` to `1` (data-loss risk, single point of failure) as a deliberate,
-# revisited-later tradeoff if you want in-cluster storage working sooner.
+# CURRENT REAL HARDWARE: home-ops-1 (HP ProDesk 600 G4 Mini) has one 256GB disk, entirely
+# consumed by the Talos install -- zero spare block device, so it contributes no OSD.
+# home-ops-2 (Asus VivoBook S510U) has a spare 1TB HDD (/dev/sda) wiped and handed to
+# Rook via `useAllDevices: true` -- the only OSD in the cluster right now. With a single
+# OSD host, `failureDomain: host` can only ever place 1 replica, so `cephBlockPools`
+# below is deliberately `replicated.size: 1` (data-loss risk, single point of failure)
+# rather than the usual 3 -- bump back up (2 once home-ops-1 gets a second disk, 3 once a
+# 3rd OSD host exists) per HARDWARE_PLAN.md's node-2 notes. Same reason this can't be
+# validated on the local dev cluster: Docker-provisioned Talos nodes have no raw block
+# devices available either, so CephCluster will likely stay unhealthy there -- that's
+# expected, not a bug (see README.md's local-cluster caveats).
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -102,7 +90,7 @@ spec:
         spec:
           failureDomain: host
           replicated:
-            size: 3
+            size: 1
         storageClass:
           enabled: true
           name: ceph-block
