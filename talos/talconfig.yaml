@@ -72,6 +72,20 @@ patches:
               - bind
               - rshared
               - rw
+  # Grants the system-upgrade namespace (kubernetes/apps/system-upgrade) os:admin access
+  # to the Talos API, which tuppr needs to drive Talos/Kubernetes upgrades. Namespace here
+  # must match tuppr's actual namespace exactly, or its upgrade jobs can't authenticate and
+  # every upgrade fails on the first node. Re-apply machine config after this changes
+  # (`talhelper gencommand apply` / `talosctl apply-config`) -- Flux can't push this.
+  - |-
+    machine:
+      features:
+        kubernetesTalosAPIAccess:
+          enabled: true
+          allowedRoles:
+            - os:admin
+          allowedKubernetesNamespaces:
+            - system-upgrade
 
 nodes:
   # HP ProDesk 600 G4 Mini. Real LAN is 192.168.18.0/24 (confirmed from the node's own
