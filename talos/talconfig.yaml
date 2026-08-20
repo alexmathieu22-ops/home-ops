@@ -87,18 +87,12 @@ patches:
             - system-upgrade
 
 nodes:
-  # HP ProDesk 600 G4 Mini. Real LAN is 192.168.18.0/24 (confirmed from the node's own
-  # console during install, not 192.168.1.0/24 as earlier placeholders assumed). IP below
-  # is reserved for this box's MAC in the router's DHCP settings (see
-  # docs/runbooks/cluster-bootstrap.md for why a reservation beats a Talos-side static IP
-  # here) -- keep it outside the Cilium LB-IPAM pool range
-  # (kubernetes/apps/kube-system/cilium/config/ippool.yaml).
+  # HP ProDesk 600 G4 Mini. IP below is reserved for this box's MAC in the router's DHCP
+  # settings (see docs/runbooks/cluster-bootstrap.md) -- keep it outside the Cilium LB-IPAM
+  #  pool range (kubernetes/apps/kube-system/cilium/config/ippool.yaml).
   #
-  # installDiskSelector (not installDisk: /dev/sdX): `talosctl get disks -n 192.168.18.39
-  # --insecure` confirmed the SSD is /dev/nvme0n1 (256GB Toshiba KBG30ZMV256G) -- the only
-  # other disk visible is the 16GB USB install stick itself (/dev/sda), which the
-  # ">= 100GB" size filter correctly excludes. Kept as a selector rather than hardcoding
-  # `/dev/nvme0n1` since it's just as unambiguous here and survives a disk swap.
+  # `talosctl get disks -n 192.168.18.39 --insecure` confirmed the SSD is /dev/nvme0n1
+  # (256GB Toshiba KBG30ZMV256G) -- the only disk in the box, so no need for a more specific selector.
   - hostname: home-ops-1
     ipAddress: 192.168.18.39
     installDiskSelector:
@@ -115,11 +109,10 @@ nodes:
   # writable, so losing either member takes down the control plane -- no fault tolerance
   # gained). Only promote this to controlPlane: true once a 3rd node exists.
   #
-  # installDiskSelector uses `model` rather than `size` (unlike home-ops-1): this laptop
-  # has two real disks -- a 1TB Toshiba MQ04ABF1 HDD (/dev/sda) and a 256GB Micron SSD
-  # (/dev/sdb), confirmed via `talosctl get disks -n 192.168.18.41 --insecure` -- so a bare
-  # size filter would be ambiguous. Installing to the SSD; the spare 1TB HDD is a candidate
-  # for Rook-Ceph OSD storage later (see home-ops-1's caveat above about having none).
+  # installDiskSelector uses `model` rather than `size` (unlike home-ops-1): this laptop has
+  # a 1TB Toshiba MQ04ABF1 HDD (/dev/sda) and a 256GB Micron SSD (/dev/sdb), confirmed via
+  # `talosctl get disks -n 192.168.18.41 --insecure` -- so a bare size filter would be ambiguous.
+  # Installing to the SSD; the spare 1TB HDD is a candidate for Rook-Ceph OSD storage later.
   - hostname: home-ops-2
     ipAddress: 192.168.18.41
     installDiskSelector:
