@@ -49,6 +49,16 @@ spec:
       network:
         connections:
           requireMsgr2: true
+      # CVE-2025-30156 (weak integrity check on aes cephx service tickets): rotates the
+      # core daemon keys (mon/mgr/osd) to the new aes256k cipher. One-off, not ongoing --
+      # Ceph and Rook were already on CVE-fixed versions, only the keys hadn't rotated
+      # yet. CSI/client keys deliberately stay on aes (unset below, chart default) since
+      # our nodes run a kernel older than the 7.0+ AES256K requires.
+      security:
+        cephx:
+          daemon:
+            keyRotationPolicy: KeyGeneration
+            keyGeneration: 2
       # Scaled down hard from upstream examples (often 8Gi+) -- 3x 16GB nodes running
       # the full infra+app stack alongside Ceph can't spare that much per OSD. Revisit
       # once real hardware is up and `ceph osd df` / actual usage is known.
