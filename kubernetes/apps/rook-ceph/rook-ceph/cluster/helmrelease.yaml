@@ -49,6 +49,16 @@ spec:
       network:
         connections:
           requireMsgr2: true
+      # TOO_FEW_OSDS and POOL_NO_REDUNDANCY are permanent given the single-OSD topology
+      # above, not transient noise -- muting (not fixing) them is what makes HEALTH_OK
+      # achievable for tuppr's health checks. Unmute both once a 2nd/3rd OSD host exists
+      # and cephBlockPools' replicated.size below is bumped back up.
+      healthCheck:
+        muteHealthWarning:
+          TOO_FEW_OSDS:
+            policy: mute
+          POOL_NO_REDUNDANCY:
+            policy: mute
       # CVE-2025-30156 (weak integrity check on aes cephx service tickets): rotates the
       # core daemon keys (mon/mgr/osd) to the new aes256k cipher. One-off, not ongoing --
       # Ceph and Rook were already on CVE-fixed versions, only the keys hadn't rotated
