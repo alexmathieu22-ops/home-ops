@@ -141,9 +141,22 @@ rule from a bigger cluster.
 | Renovate config preset bumps | no | none |
 | `actions/*`, `renovatebot/*` GitHub Actions | no | 1 minute |
 | Any other GitHub Actions minor/patch/digest | no | 3 days |
+| Container image / Helm chart minor or patch bumps, except the exclusions below | yes | 3 days |
 
-Everything else — new majors, most app version bumps, anything not matched above —
-opens as a normal PR for manual review and merge.
+The last rule is broad by design — it's the "almost all minors" default for app
+dependencies — but it excludes anything whose blast radius reaches beyond a single app:
+Talos node versions, Kubernetes control-plane versions (both driven by
+[tuppr](../../kubernetes/apps/system-upgrade/tuppr)), Cilium (CNI), Rook-Ceph (the only
+storage layer), Flux's own controllers (`gotk-components.yaml` — the thing that applies
+every other fix), and the two ingress paths into the cluster (Envoy Gateway,
+cloudflared). Those stay on major-bump behavior: manual PR, manual review, manual merge,
+regardless of update type. CI here is schema validation only (kubeconform + talhelper) —
+it catches malformed manifests, not runtime regressions, which is part of why the
+critical-path exclusions above don't rely on CI green as sufficient trust.
+
+Everything else not matched by any rule above — new majors on non-excluded deps, and any
+dependency type outside `docker`/`helm` — opens as a normal PR for manual review and
+merge.
 
 ## Labels
 
