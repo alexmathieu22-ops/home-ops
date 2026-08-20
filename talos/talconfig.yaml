@@ -36,7 +36,8 @@ patches:
         net.core.rmem_max: "67108864"
         net.core.wmem_max: "67108864"
   # local-path-provisioner PVCs: Talos's rootfs is read-only, only /var persists.
-  # Re-apply after changing this (`talhelper gencommand apply`) -- Flux can't push it.
+  # Re-apply after changing this (`talhelper genconfig` then `gencommand apply`) --
+  # Flux can't push machine config.
   - |-
     machine:
       kubelet:
@@ -48,16 +49,22 @@ patches:
               - bind
               - rshared
               - rw
-  # Grants system-upgrade namespace os:admin Talos API access, needed by tuppr.
-  - |-
-    machine:
-      features:
-        kubernetesTalosAPIAccess:
-          enabled: true
-          allowedRoles:
-            - os:admin
-          allowedKubernetesNamespaces:
-            - system-upgrade
+
+# Talos only allows kubernetesTalosAPIAccess on control-plane machines; this is
+# enough for the whole cluster since it's the kube-apiserver-side extension that
+# matters, not a per-node gate. Grants system-upgrade namespace os:admin Talos API
+# access, needed by tuppr.
+controlPlane:
+  patches:
+    - |-
+      machine:
+        features:
+          kubernetesTalosAPIAccess:
+            enabled: true
+            allowedRoles:
+              - os:admin
+            allowedKubernetesNamespaces:
+              - system-upgrade
 
 nodes:
   # HP ProDesk 600 G4 Mini. Only disk is /dev/nvme0n1 (256GB).
