@@ -38,6 +38,13 @@ spec:
         # still prefers spreading mons across distinct nodes when enough exist, this only
         # removes the hard block for when there aren't enough.
         allowMultiplePerNode: true
+      # Confirmed live: draining a node with 2 of 3 mons dropped quorum, and the
+      # operator-managed mon PDB then refused to also evict the 3rd -- correctly, but
+      # it stalled the drain and needed a manual uncordon to unstick. Accepted tradeoff
+      # (2 real nodes, hardware constrained): let drains proceed and accept brief
+      # storage unavailability rather than have Rook's PDBs block node maintenance.
+      disruptionManagement:
+        managePodBudgets: false
       mgr:
         modules:
           - name: pg_autoscaler
