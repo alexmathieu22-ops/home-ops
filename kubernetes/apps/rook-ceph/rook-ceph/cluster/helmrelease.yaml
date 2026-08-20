@@ -54,11 +54,9 @@ spec:
       # achievable for tuppr's health checks. Unmute both once a 2nd/3rd OSD host exists
       # and cephBlockPools' replicated.size below is bumped back up.
       #
-      # The AUTH_INSECURE_* trio is the CSI/client-key counterpart to the cephx daemon
-      # key rotation below: those keys deliberately stay on the older aes cipher (our
-      # nodes' kernel predates the 7.0+ AES256K requires), which is expected to persist
-      # for a long transition period per Rook's own docs, not something to chase here.
-      # Unmute once CSI keys are migrated to aes256k (needs newer node kernels first).
+      # The AUTH_INSECURE_* trio: CSI keys must stay on aes -- aes256k needs kernel 7.0+,
+      # nodes are on 6.18, and no Talos release (even v1.14 rc) ships that kernel yet.
+      # Hard blocker, not caution. Unmute once a Talos release does.
       healthCheck:
         muteHealthWarning:
           TOO_FEW_OSDS:
