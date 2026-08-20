@@ -9,7 +9,7 @@
 ---
 clusterName: home-ops
 
-talosVersion: v1.13.8
+talosVersion: v1.13.9
 kubernetesVersion: v1.36.3
 
 # No VIP: only one control-plane node, so this points directly at it.
