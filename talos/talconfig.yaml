@@ -89,7 +89,7 @@ patches:
 nodes:
   # HP ProDesk 600 G4 Mini. IP below is reserved for this box's MAC in the router's DHCP
   # settings (see docs/runbooks/cluster-bootstrap.md) -- keep it outside the Cilium LB-IPAM
-  #  pool range (kubernetes/apps/kube-system/cilium/config/ippool.yaml).
+  # pool range (kubernetes/apps/kube-system/cilium/config/ippool.yaml).
   #
   # `talosctl get disks -n 192.168.18.39 --insecure` confirmed the SSD is /dev/nvme0n1
   # (256GB Toshiba KBG30ZMV256G) -- the only disk in the box, so no need for a more specific selector.
