@@ -14,3 +14,18 @@ spec:
   upgrade:
     remediation:
       retries: 3
+  values:
+    # Confirmed live: with 1 replica, tuppr's own controller pod can land on the very
+    # node it's mid-upgrade on. That node's drain evicts tuppr itself, losing tracking
+    # continuity right when it matters most. 2 replicas + required anti-affinity spreads
+    # them 1-per-node across the 2 real nodes, so whichever node drains, the other
+    # replica (leader-elected, same as today) keeps running throughout.
+    replicaCount: 2
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: tuppr
+                app.kubernetes.io/instance: tuppr
+            topologyKey: kubernetes.io/hostname
