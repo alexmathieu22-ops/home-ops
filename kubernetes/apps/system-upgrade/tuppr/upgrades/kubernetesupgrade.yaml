@@ -8,8 +8,11 @@ spec:
     # renovate: datasource=docker depName=ghcr.io/siderolabs/kubelet
     version: v1.36.3
   healthChecks:
+    # Not HEALTH_OK: this cluster's single-OSD topology is permanently HEALTH_WARN
+    # (TOO_FEW_OSDS, POOL_NO_REDUNDANCY -- see rook-ceph/cluster/helmrelease.yaml),
+    # so a strict HEALTH_OK check would block upgrades forever.
     - apiVersion: ceph.rook.io/v1
       kind: CephCluster
       name: rook-ceph
       namespace: rook-ceph
-      expr: status.ceph.health in ["HEALTH_OK"]
+      expr: status.ceph.health != "HEALTH_ERR"
