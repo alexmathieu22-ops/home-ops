@@ -37,5 +37,49 @@
       automergeType: "branch",
       ignoreTests: true,
     },
+    {
+      description: "Auto-merge container image and Helm chart minor/patch bumps everywhere except the very-critical exclusions below",
+      matchDatasources: ["docker", "helm"],
+      matchUpdateTypes: ["minor", "patch"],
+      automerge: true,
+      automergeType: "pr",
+      minimumReleaseAge: "3 days",
+      ignoreTests: false,
+    },
+    {
+      description: "Never auto-merge Talos node version bumps (tuppr TalosUpgrade) -- OS-level, can strand a node",
+      matchFileNames: ["kubernetes/apps/system-upgrade/tuppr/upgrades/talosupgrade.yaml"],
+      automerge: false,
+    },
+    {
+      description: "Never auto-merge Kubernetes version bumps (tuppr KubernetesUpgrade) -- control plane, can break the whole cluster",
+      matchFileNames: ["kubernetes/apps/system-upgrade/tuppr/upgrades/kubernetesupgrade.yaml"],
+      automerge: false,
+    },
+    {
+      description: "Never auto-merge Cilium -- CNI, a bad rollout breaks all pod networking",
+      matchDatasources: ["helm"],
+      matchPackageNames: ["cilium"],
+      automerge: false,
+    },
+    {
+      description: "Never auto-merge Rook-Ceph -- only storage layer, a bad rollout risks data loss/availability",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["/rook-ceph/", "/rook-ceph-cluster/"],
+      automerge: false,
+    },
+    {
+      description: "Never auto-merge Flux itself -- the controllers that apply everything else, including any future fix",
+      matchFileNames: ["kubernetes/flux/cluster/flux-system/gotk-components.yaml"],
+      automerge: false,
+    },
+    {
+      description: "Never auto-merge Envoy Gateway or cloudflared -- the only ingress paths into the cluster from outside",
+      matchFileNames: [
+        "kubernetes/apps/networking/envoy-gateway/**",
+        "kubernetes/apps/networking/cloudflared/**",
+      ],
+      automerge: false,
+    },
   ],
 }
