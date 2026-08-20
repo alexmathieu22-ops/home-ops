@@ -53,11 +53,21 @@ spec:
       # above, not transient noise -- muting (not fixing) them is what makes HEALTH_OK
       # achievable for tuppr's health checks. Unmute both once a 2nd/3rd OSD host exists
       # and cephBlockPools' replicated.size below is bumped back up.
+      #
+      # The AUTH_INSECURE_* trio: CSI keys must stay on aes -- aes256k needs kernel 7.0+,
+      # nodes are on 6.18, and no Talos release (even v1.14 rc) ships that kernel yet.
+      # Hard blocker, not caution. Unmute once a Talos release does.
       healthCheck:
         muteHealthWarning:
           TOO_FEW_OSDS:
             policy: mute
           POOL_NO_REDUNDANCY:
+            policy: mute
+          AUTH_INSECURE_CLIENT_KEY_TYPE:
+            policy: mute
+          AUTH_INSECURE_KEYS_ALLOWED:
+            policy: mute
+          AUTH_INSECURE_KEYS_CREATABLE:
             policy: mute
       # CVE-2025-30156 (weak integrity check on aes cephx service tickets): rotates the
       # core daemon keys (mon/mgr/osd) to the new aes256k cipher. One-off, not ongoing --
