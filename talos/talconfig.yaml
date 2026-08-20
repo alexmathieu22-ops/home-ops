@@ -9,6 +9,10 @@
 ---
 clusterName: home-ops
 
+# The actual running version is driven live by tuppr (kubernetes/apps/system-upgrade),
+# not by applying this file -- tuppr version-swaps each node's current install image
+# over the Talos API directly. These two just need to stay in sync so a from-scratch
+# reinstall doesn't provision an older baseline than what's actually running.
 talosVersion: v1.13.9
 kubernetesVersion: v1.36.3
 
