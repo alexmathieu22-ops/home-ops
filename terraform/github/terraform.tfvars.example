@@ -1,0 +1,5 @@
+# Copy to terraform.tfvars (gitignored) and fill in real values.
+
+# Fine-grained PAT scoped to this repo with Administration:write, or `gh auth token`
+# for a quick local run using your existing gh CLI session.
+github_token = "xxxxx"
