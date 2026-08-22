@@ -1,5 +1,5 @@
 # Plain Tailscale client, not the Tailscale Kubernetes Operator (incompatible with
-# self-hosted Headscale) -- see IMPLEMENTATION_NOTES.md ("Networking") for this and the
+# self-hosted Headscale) -- see docs/adr/0015-headscale-subnet-router.md for this and the
 # TS_KUBE_SECRET/TS_LOGIN_SERVER/advertise-tags gotchas below.
 apiVersion: apps/v1
 kind: StatefulSet
@@ -36,7 +36,7 @@ spec:
               value: ""
             - name: TS_ACCEPT_DNS
               value: "false"
-            # --login-server via TS_EXTRA_ARGS, not TS_LOGIN_SERVER -- see IMPLEMENTATION_NOTES.md.
+            # --login-server via TS_EXTRA_ARGS, not TS_LOGIN_SERVER -- see docs/adr/0015-headscale-subnet-router.md.
             - name: TS_EXTRA_ARGS
               value: --login-server=https://headscale.alexandremathieu.com
             # Talos's kernel ships no legacy iptables netfilter modules at all (confirmed:

@@ -31,7 +31,7 @@ spec:
   targetNamespace: rook-ceph
   dependsOn:
     - name: rook-ceph
-  # Not gated on CephCluster health (zero usable OSDs currently) -- see IMPLEMENTATION_NOTES.md.
+  # Not gated on CephCluster health -- see docs/adr/0006-rook-ceph-topology-and-local-path-interim.md.
   sourceRef:
     kind: GitRepository
     name: flux-system

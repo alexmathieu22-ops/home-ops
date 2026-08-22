@@ -1,4 +1,4 @@
-# Only centrally-defined Kustomization -- see IMPLEMENTATION_NOTES.md for the fan-out pattern.
+# Only centrally-defined Kustomization -- see docs/adr/0001-split-ks-yaml-for-crd-cr-races.md for the fan-out pattern.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -15,7 +15,8 @@ spec:
   patches:
     - # Force-replace CRDs on every HelmRelease install/upgrade -- Helm's native crds/
       # dir is install-only by default, so charts that bundle CRDs there (e.g.
-      # envoy-gateway) never get schema updates on upgrade. See IMPLEMENTATION_NOTES.md.
+      # envoy-gateway) never get schema updates on upgrade. See
+      # docs/adr/0013-gateway-api-internal-external-split.md.
       # HelmReleases live under each component's own `app/` path, outside this
       # Kustomization's build tree, so this patches every child Kustomization instead,
       # injecting the HelmRelease patch into each one's own `spec.patches`.

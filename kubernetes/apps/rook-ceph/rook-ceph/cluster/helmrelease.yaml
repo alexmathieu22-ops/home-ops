@@ -1,5 +1,5 @@
 # Hardware topology, replicated.size, and mon.allowMultiplePerNode rationale: see
-# IMPLEMENTATION_NOTES.md's Storage section.
+# docs/adr/0006-rook-ceph-topology-and-local-path-interim.md.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -21,9 +21,9 @@ spec:
     cephClusterSpec:
       mon:
         count: 3
-        # Local dev cluster needs this (see IMPLEMENTATION_NOTES.md); harmless on real hardware.
+        # Local dev cluster needs this (see docs/adr/0006-rook-ceph-topology-and-local-path-interim.md); harmless on real hardware.
         allowMultiplePerNode: true
-      # See IMPLEMENTATION_NOTES.md's "Node drains and Rook-managed PDBs".
+      # See docs/adr/0007-rook-ceph-node-drains-and-pdbs.md.
       disruptionManagement:
         managePodBudgets: false
       mgr:
@@ -37,7 +37,7 @@ spec:
       network:
         connections:
           requireMsgr2: true
-      # See IMPLEMENTATION_NOTES.md's "Muted health warnings".
+      # See docs/adr/0008-rook-ceph-muted-health-warnings.md.
       healthCheck:
         muteHealthWarning:
           TOO_FEW_OSDS:
@@ -50,7 +50,7 @@ spec:
             policy: mute
           AUTH_INSECURE_KEYS_CREATABLE:
             policy: mute
-      # CVE-2025-30156 daemon key rotation -- see IMPLEMENTATION_NOTES.md.
+      # CVE-2025-30156 daemon key rotation -- see docs/adr/0008-rook-ceph-muted-health-warnings.md.
       security:
         cephx:
           daemon:

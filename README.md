@@ -23,7 +23,7 @@ self-hosted Headscale.
 | VPN host provisioning | [OpenTofu](https://opentofu.org/) (Oracle Cloud VM + DNS only, see below) |
 
 See [PROJECT_BRIEF.md](PROJECT_BRIEF.md), [E2E_PLAN.md](E2E_PLAN.md),
-[HARDWARE_PLAN.md](HARDWARE_PLAN.md), and [IMPLEMENTATION_NOTES.md](IMPLEMENTATION_NOTES.md)
+[HARDWARE_PLAN.md](HARDWARE_PLAN.md), and the [ADRs](docs/adr/README.md)
 for the full rationale, rollout plan, and per-component implementation gotchas (resource
 YAML itself keeps only short pointers, not full rationale).
 

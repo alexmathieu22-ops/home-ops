@@ -69,7 +69,7 @@ spec:
           - path: /etc/config/
     # Verbatim from upstream's local-path-config ConfigMap (setup/teardown/helperPod.yaml
     # are the helper-pod scripts local-path-provisioner spawns per PVC to create/remove
-    # the backing directory) -- see IMPLEMENTATION_NOTES.md for the /var path rationale.
+    # the backing directory) -- see docs/adr/0005-local-path-provisioner-extra-mounts.md for the /var path rationale.
     configMaps:
       config:
         data:
