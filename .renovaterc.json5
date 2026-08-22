@@ -13,4 +13,11 @@
   // branches to be up to date before merging, non-automerge PRs would otherwise go
   // stale every time something else merges and need a manual "Update branch" click.
   rebaseWhen: "behind-base-branch",
+  packageRules: [
+    {
+      description: "The annotated `# renovate: datasource=... depName=...` regex manager has no digest capture group, so pinDigests has nowhere to write the digest and fails the whole branch (see ghcr.io/siderolabs/installer and ghcr.io/siderolabs/kubelet in tuppr upgrades).",
+      matchManagers: ["regex"],
+      pinDigests: false,
+    },
+  ],
 }
