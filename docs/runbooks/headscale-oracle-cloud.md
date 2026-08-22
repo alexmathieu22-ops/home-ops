@@ -231,7 +231,7 @@ video stream fits comfortably), but this VM is also running Headscale itself, so
 sustained use (multiple streams, large downloads) competes with the control-plane
 responsiveness the whole tailnet depends on. Treat it as a light/opportunistic exit node,
 not a daily-driver streaming VPN. Once real hardware + a home subnet router exist, that's
-likely the more valuable exit node to use day-to-day (a home IP, not a elsewhere VPS IP,
+likely the more valuable exit node to use day-to-day (a home IP, not a datacenter VPS IP,
 and dedicated resources not shared with anything critical).
 
 ## Notes

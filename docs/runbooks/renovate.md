@@ -158,6 +158,39 @@ Everything else not matched by any rule above — new majors on non-excluded dep
 dependency type outside `docker`/`helm` — opens as a normal PR for manual review and
 merge.
 
+## Merge queue
+
+Required status checks on `main` are `strict` (branch must be up to date with `main` to
+merge — see [prerequisite 3](#3-repo-settings-so-automerge-has-something-to-gate-on)).
+That's the correct safety choice, but it has a side effect: every merge to `main`
+invalidates the "up to date" status of every other PR waiting to automerge. With several
+Renovate automerges pending at once, they serialize — each has to rebase and re-run CI
+before it can merge, one at a time, rather than merging together. `rebaseWhen:
+"behind-base-branch"` in [`.renovaterc.json5`](../../.renovaterc.json5) means this
+self-heals across Renovate runs, but it's a real backlog-draining delay, not instant.
+
+A merge queue removes the serialization: PRs enter a queue, each is tested against a
+temporary ref built on top of the *current* tip of `main` (and whatever's ahead of it in
+the queue), and only then merged — no manual rebase-and-retry cycle.
+
+```mermaid
+flowchart TD
+    A["Daily cron<br/>16:00 UTC"] --> B["Renovate run<br/>scan + pin digests"]
+    B --> C["PR opened<br/>automerge armed"]
+    C --> D["Merge queue<br/>tests vs latest main"]
+    D --> E["Merged to main<br/>squash · queue advances"]
+    D --> F["Checks fail<br/>PR stays open, retried next run"]
+```
+
+GitHub's native merge queue only requires the repo to be public (or GitHub Team/Enterprise
+Cloud for private) — this repo is public, so no third-party tooling or branch-protection
+trade-off is needed. Enable it via a repository ruleset targeting `main` with a
+`merge_queue` rule (squash merge, required status checks matching the two `ci.yaml` jobs).
+
+For reference: neither onedr0p/home-ops nor buroa/home-ops uses a merge queue at all —
+both have zero branch protection rules on `main`, so they never hit this problem in the
+first place. They just run Renovate hourly for update freshness.
+
 ## Labels
 
 `.github/labels.yaml` declares `type/major|minor|patch|digest`, synced by

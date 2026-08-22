@@ -1,16 +1,4 @@
-# Adapted from onedr0p/home-ops and buroa/k8s-gitops, not copied:
-# - No Multus/dedicated IoT VLAN IP (k8s.v1.cni.cncf.io/networks in both references) --
-#   this cluster has no Multus CNI or VLAN segmentation. Plain ClusterIP-backed pod.
-# - No Gateway API route / Cloudflare Access, unlike either reference. Exposed instead as
-#   a LoadBalancer Service straight from Cilium's LB-IPAM -- gets its own LAN IP directly
-#   (`kubectl get svc -n default home-assistant-app`), no hostname/DNS/TLS needed. Chosen
-#   over the Gateway route because there's no working network-wide internal DNS yet
-#   (AdGuard was pulled pending the UniFi gateway project) and because a smart-home panel
-#   is more sensitive than a status page to leave path-dependent on that.
-# - storageClass: local-path, not ceph-block -- Rook-Ceph has no OSDs deployed yet (same
-#   reason headscale-subnet-router uses local-path). Migrate once Ceph is actually live.
-# - No ExternalSecret/integration API keys (weather providers, etc. in onedr0p's) -- add
-#   if/when specific integrations need them.
+# Design decisions and probe/venv rationale: see IMPLEMENTATION_NOTES.md's Home Assistant section.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -18,9 +6,7 @@ metadata:
   namespace: default
 spec:
   interval: 1h
-  # First boot (venv build + HA's own init) can take longer than Flux's 5m default wait --
-  # give it real headroom instead of Helm giving up mid-boot and remediating (uninstall +
-  # retry), which was compounding with the venv-rebuild-on-restart issue below.
+  # First-boot venv build can exceed Flux's 5m default wait -- see IMPLEMENTATION_NOTES.md.
   timeout: 10m
   chartRef:
     kind: OCIRepository
@@ -42,21 +28,8 @@ spec:
               tag: 2026.8.2@sha256:84f5b1b26e1597a3d5a19a7b6e2ed085ec8e3fffcbe46049acf62f9e25ea400e
             env:
               TZ: America/Toronto
-            # Matches onedr0p's actual pattern (not buroa's, which shares the strict
-            # health check across liveness AND readiness): liveness/startup are plain
-            # (no custom/type), which app-template renders as a bare TCP check against the
-            # primary port -- lenient, never kills the container just for still booting.
-            # Only readiness runs a strict check; failing it just withholds traffic, it
-            # doesn't restart anything.
-            #
-            # /healthz (what both references actually use) is NOT a native HA Core
-            # endpoint -- confirmed via curl (404) and via research: it only exists if a
-            # third-party custom component (hass-simple-healthcheck) is installed, which
-            # neither reference's HelmRelease shows adding, so their setups must already
-            # have it from prior config. A fresh install has no custom components, so it
-            # 404s forever. Using / instead: Kubernetes' built-in HTTP probe treats any
-            # 2xx-3xx as success, and / reliably returns 302 (onboarding redirect) on a
-            # stock install -- confirmed working via curl.
+            # Probe design (lenient liveness/startup, strict readiness only, / not
+            # /healthz) -- see IMPLEMENTATION_NOTES.md's Home Assistant section.
             probes:
               liveness:
                 enabled: true
@@ -102,13 +75,7 @@ spec:
         ports:
           http:
             port: *port
-    # .venv back on scratch/emptyDir, matching buroa's actual pattern -- tried moving it
-    # onto the persistent config PVC to avoid rebuilding it on every restart, but
-    # local-path's PVC directory isn't chowned to uid 1000 the way emptyDir is
-    # ("Permission denied" writing .venv/CACHEDIR.TAG), unlike emptyDir which gets correct
-    # fsGroup ownership automatically. Reverted rather than fight local-path's permission
-    # model. This is fine now that liveness/startup are lenient (see probes comment
-    # above) -- a restart means a slow venv rebuild, not a crash loop.
+    # .venv on scratch/emptyDir, not the persistent PVC -- see IMPLEMENTATION_NOTES.md.
     persistence:
       config:
         type: persistentVolumeClaim

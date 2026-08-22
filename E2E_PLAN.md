@@ -264,7 +264,7 @@ declared in each component's own `ks.yaml`):
    or as a HelmRelease if you'd rather run it in-cluster and NAT-punch to it. Most homelabbers
    run it on the standalone VPS for exactly the "front door shouldn't depend on the thing it
    fronts" reason.
-2. Install the Tailscale client on your and your housemate's devices, pointed at your
+2. Install the Tailscale client on the devices that need tailnet access, pointed at your
    Headscale server (`tailscale up --login-server=https://headscale.yourdomain.com`).
 3. Deploy a **subnet router** (a small Tailscale container/pod advertising your home LAN CIDR)
    so both tailnet devices can reach the whole home network, not just the cluster.

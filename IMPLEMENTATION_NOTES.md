@@ -58,21 +58,41 @@ most CRDs) so staying not-Ready is an accurate signal, not a false green.
 Rook-Ceph's normal topology is a dedicated raw block device per node for OSDs — it only
 claims genuinely free/unpartitioned space, so at worst it comes up with zero usable OSDs
 (not destructive to the Talos install) rather than fighting the OS for its disk.
-**Current real hardware** (HP ProDesk 600 G4 Mini) has one 256GB NVMe, entirely consumed
-by the Talos install, zero spare block device — expect `rook-ceph-cluster`'s CephCluster
-to sit unhealthy with 0 OSDs until a second disk is attached (the box's second, empty
-M.2 slot is the cleanest option — see HARDWARE_PLAN.md, which doesn't currently budget
-for it). Separately, `cephBlockPools` is `replicated.size: 3`: with a single node (and
-likely a single OSD once one exists), Ceph can never place 3 replicas, so the pool stays
-unhealthy even after adding one disk — not fixed yet since it doesn't block anything else
-in the dependency chain. Either leave the Kustomization unreconciled until more nodes
-exist, or drop `replicated.size` to `1` (data-loss risk, single point of failure) as a
-deliberate, revisited-later tradeoff. `mon.allowMultiplePerNode: true` is required for
-the local single-node dev cluster (Rook refuses to schedule 3 mons on fewer than 3 nodes
+**Current real hardware**: `home-ops-1` (HP ProDesk 600 G4 Mini) has one 256GB NVMe,
+entirely consumed by the Talos install, zero spare block device, contributing no OSD.
+`home-ops-2` (a repurposed laptop) has a spare 1TB HDD (`/dev/sda`) wiped and handed to
+Rook via `useAllDevices: true` — the only OSD in the cluster right now. With a single OSD
+host, `failureDomain: host` can only ever place 1 replica, so `cephBlockPools` is
+deliberately `replicated.size: 1` (data-loss risk, single point of failure) rather than
+the usual 3 — bump back up (2 once `home-ops-1` gets a second disk, 3 once a 3rd OSD host
+exists) per HARDWARE_PLAN.md's node-2 notes. Same reason this can't be validated on the
+local dev cluster: Docker-provisioned Talos nodes have no raw block devices available
+either, so CephCluster will likely stay unhealthy there — that's expected, not a bug (see
+README.md's local-cluster caveats). `mon.allowMultiplePerNode: true` is required for the
+local single-node dev cluster (Rook refuses to schedule 3 mons on fewer than 3 nodes
 otherwise, permanently blocking the HelmRelease's `--wait`) and is harmless to also carry
-into the real multi-node config. `mgr`/`mon`/`osd` resource requests are scaled well
-below common upstream examples (often 8Gi+) to fit this hardware — revisit once real
-usage is known (`ceph osd df`).
+into the real multi-node config — Rook still prefers spreading mons across distinct nodes
+when enough exist, this only removes the hard block for when there aren't enough.
+`mgr`/`mon`/`osd` resource requests are scaled well below common upstream examples (often
+8Gi+) to fit this hardware — revisit once real usage is known (`ceph osd df`).
+
+**Node drains and Rook-managed PDBs**: confirmed live — draining a node with 2 of 3 mons
+dropped quorum, and the operator-managed mon PDB then refused to also evict the 3rd —
+correctly, but it stalled the drain and needed a manual uncordon to unstick. Accepted
+tradeoff given the current 2-node hardware constraint: `disruptionManagement.
+managePodBudgets: false` lets drains proceed and accepts brief storage unavailability
+rather than having Rook's PDBs block node maintenance.
+
+**Muted health warnings**: `TOO_FEW_OSDS` and `POOL_NO_REDUNDANCY` are permanent given the
+single-OSD topology above, not transient noise — muting (not fixing) them is what makes
+`HEALTH_OK` achievable for tuppr's health checks. Unmute both once a 2nd/3rd OSD host
+exists and `replicated.size` is bumped back up. The `AUTH_INSECURE_*` trio: CSI/client
+keys must stay on `aes` — `aes256k` needs kernel 7.0+, nodes are on an older kernel, and
+no current Talos release ships that kernel yet. Hard blocker, not caution — unmute once a
+Talos release does. Daemon (mon/mgr/osd) keys, separately, are already rotated to
+`aes256k` (`security.cephx.daemon.keyRotationPolicy: KeyGeneration`) as a one-off fix for
+CVE-2025-30156 (weak integrity check on aes cephx service tickets) — Ceph/Rook were
+already on CVE-fixed versions, only the keys hadn't rotated yet.
 
 **Interim answer while Rook-Ceph has no usable OSDs:**
 `kubernetes/apps/kube-system/local-path-provisioner` -- node-local hostPath storage
@@ -92,6 +112,45 @@ transcribed 1:1 from upstream's own raw deploy manifest
 (rancher/local-path-provisioner `deploy/local-path-storage.yaml`) rather than depending
 on anyone's packaging of it. Not yet live-verified against the real cluster -- confirm a
 PVC actually binds after first reconcile.
+
+## Home Assistant
+
+Adapted from onedr0p/home-ops and buroa/k8s-gitops, not copied: no Multus/dedicated IoT
+VLAN IP (`k8s.v1.cni.cncf.io/networks` in both references) — this cluster has no Multus
+CNI or VLAN segmentation, so it's a plain ClusterIP-backed pod. No Gateway API route or
+Cloudflare Access, unlike either reference — exposed instead as a `LoadBalancer` Service
+straight from Cilium's LB-IPAM, getting its own LAN IP directly
+(`kubectl get svc -n default home-assistant-app`), no hostname/DNS/TLS needed. Chosen over
+the Gateway route because there's no working network-wide internal DNS yet (AdGuard was
+pulled pending the UniFi gateway project) and because a smart-home panel is more sensitive
+than a status page to leave path-dependent on that. `storageClass: local-path`, not
+`ceph-block`, for the same no-OSDs-yet reason as `headscale-subnet-router` (see Storage
+above) — migrate once Ceph is actually live. No `ExternalSecret`/integration API keys
+(weather providers, etc., in onedr0p's) — add if/when specific integrations need them.
+
+`timeout: 10m`: first boot (venv build + HA's own init) can take longer than Flux's 5m
+default wait — real headroom instead of Helm giving up mid-boot and remediating (uninstall
++ retry), which was compounding with the venv-rebuild-on-restart issue below.
+
+**Probes**: matches onedr0p's actual pattern (not buroa's, which shares the strict health
+check across liveness AND readiness) — liveness/startup are plain (no custom/type), which
+app-template renders as a bare TCP check against the primary port, lenient, never killing
+the container just for still booting. Only readiness runs a strict check; failing it just
+withholds traffic, it doesn't restart anything. `/healthz` (what both references actually
+use) is NOT a native HA Core endpoint — confirmed via curl (404) and research: it only
+exists if a third-party custom component (hass-simple-healthcheck) is installed, which
+neither reference's HelmRelease shows adding, so their setups must already have it from
+prior config. A fresh install has no custom components, so it 404s forever. Using `/`
+instead: Kubernetes' built-in HTTP probe treats any 2xx-3xx as success, and `/` reliably
+returns 302 (onboarding redirect) on a stock install — confirmed working via curl.
+
+**`.venv` on scratch/`emptyDir`**, matching buroa's actual pattern: tried moving it onto
+the persistent config PVC to avoid rebuilding it on every restart, but local-path's PVC
+directory isn't chowned to uid 1000 the way `emptyDir` is ("Permission denied" writing
+`.venv/CACHEDIR.TAG`), unlike `emptyDir` which gets correct `fsGroup` ownership
+automatically. Reverted rather than fight local-path's permission model. This is fine now
+that liveness/startup are lenient (see Probes above) — a restart means a slow venv
+rebuild, not a crash loop.
 
 ## Networking: Gateway API split, AdGuard Home, cloudflared, Headscale
 
