@@ -53,6 +53,6 @@ the 1Password item + a cloudflared rollout for no benefit. Same rationale as
 Every future publicly-reachable app only needs an `HTTPRoute` — no per-app cloudflared
 dashboard entry, no per-app LoadBalancer IP. Internal-only apps route through the
 `internal` Gateway and consume one of Cilium's LB-IPAM pool IPs each. See also
-[0001](0001-split-ks-yaml-for-crd-cr-races.md) for the `ks.yaml` split this component
+[0001](../flux/0001-split-ks-yaml-for-crd-cr-races.md) for the `ks.yaml` split this component
 follows, and [0016](0016-flux-github-webhook-receiver.md) for another consumer of the
 same `external` Gateway + cloudflared tunnel path.

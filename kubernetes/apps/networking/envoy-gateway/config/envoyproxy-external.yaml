@@ -1,4 +1,4 @@
-# Forces the external Gateway's Service to ClusterIP -- see docs/adr/0013-gateway-api-internal-external-split.md.
+# Forces the external Gateway's Service to ClusterIP -- see docs/adr/networking/0013-gateway-api-internal-external-split.md.
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:

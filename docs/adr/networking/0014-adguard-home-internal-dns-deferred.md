@@ -36,6 +36,6 @@ apps without an official upstream chart.
 Removed (`chore(networking): remove adguard-home, deferred pending real router
 hardware`) -- deferred until a UniFi gateway replaces the ISP router, which is expected
 to provide local DNS records natively and remove the need for this component entirely.
-Its removal is why [0009](0009-home-assistant-loadbalancer-exposure.md) exposes Home
+Its removal is why [0009](../home-assistant/0009-home-assistant-loadbalancer-exposure.md) exposes Home
 Assistant via a bare LoadBalancer IP instead of a Gateway route: there is currently no
 working network-wide internal DNS to depend on.
