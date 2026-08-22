@@ -3,6 +3,7 @@
   extends: [
     "github>home-operations/renovate-presets#8.0.0",
     ":timezone(America/Toronto)",
+    "docker:pinDigests",
     "github>alexmathieu22/home-ops//.renovate/automerge.json5",
     "github>alexmathieu22/home-ops//.renovate/grouping.json5",
     "github>alexmathieu22/home-ops//.renovate/labels.json5",
