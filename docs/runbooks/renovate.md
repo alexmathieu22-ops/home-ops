@@ -73,7 +73,7 @@ unset OP_SERVICE_ACCOUNT_TOKEN   # make sure this runs under your personal accou
 eval $(op signin)
 
 op service-account create renovate-ci --vault home-ops:read_items --raw \
-  | gh secret set OP_SERVICE_ACCOUNT_TOKEN --repo alexmathieu22/home-ops
+  | gh secret set OP_SERVICE_ACCOUNT_TOKEN --repo alexmathieu22-ops/home-ops
 ```
 
 The token is piped directly into the GitHub secret and never displayed.
@@ -81,9 +81,9 @@ The token is piped directly into the GitHub secret and never displayed.
 ### 3. Repo settings so automerge has something to gate on
 
 ```bash
-gh api repos/alexmathieu22/home-ops --method PATCH -f allow_auto_merge=true
+gh api repos/alexmathieu22-ops/home-ops --method PATCH -f allow_auto_merge=true
 
-gh api repos/alexmathieu22/home-ops/branches/main/protection \
+gh api repos/alexmathieu22-ops/home-ops/branches/main/protection \
   --method PUT \
   --input - <<'JSON'
 {
@@ -115,7 +115,7 @@ check, `automerge: true` has nothing to wait on.
 
 `.renovaterc.json5` itself only lists `extends` — the actual `packageRules` live in
 `.renovate/*.json5`, pulled back in via self-referencing local presets
-(`github>alexmathieu22/home-ops//.renovate/automerge.json5`, etc.). Renovate resolves
+(`github>alexmathieu22-ops/home-ops//.renovate/automerge.json5`, etc.). Renovate resolves
 these against the repo on GitHub at runtime, merging each file's `packageRules` array
 into the final config — so a change to any `.renovate/*.json5` file only takes effect
 once it's on `main` (this is also why the Renovate workflow's `paths:` trigger watches

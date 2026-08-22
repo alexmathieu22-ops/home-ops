@@ -244,7 +244,7 @@ talosctl config context home-ops      # same idea for talosctl
 ```
 
 Generate a GitHub PAT for the bootstrap command itself — a fine-grained token scoped to
-just this repo is the least-privilege option (`alexmathieu22/home-ops` under GitHub →
+just this repo is the least-privilege option (`alexmathieu22-ops/home-ops` under GitHub →
 Settings → Developer settings → Personal access tokens → Fine-grained tokens):
 
 - **Contents** → Read and write (Flux pushes the bootstrap manifests)

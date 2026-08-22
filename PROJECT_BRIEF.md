@@ -8,7 +8,7 @@ flag it before deviating.
 ## Identity
 
 - GitHub account: `alexmathieu22`
-- Repo: `alexmathieu22/home-ops`, public
+- Repo: `alexmathieu22-ops/home-ops`, public
 - Location: `~/Repos/home-ops`
 
 ## Non-negotiable architecture decisions (with rationale, so they aren't "corrected")
@@ -103,7 +103,7 @@ home-ops/
 
 ## Implementation order
 
-1. `.tool-versions`, repo init, `gh repo create alexmathieu22/home-ops --public`
+1. `.tool-versions`, repo init, `gh repo create alexmathieu22-ops/home-ops --public`
 2. `talosctl cluster create` locally (Docker provisioner) as the dev target
 3. `talos/talconfig.yaml` via talhelper, generate configs against the local cluster
 4. `bootstrap/kustomize/external-secrets` — a `Secret` manifest referencing

@@ -97,7 +97,7 @@ Create the repo (public is fine and recommended — easier to ask for help, and 
 Actions work better on public repos for free-tier minutes):
 
 ```bash
-gh repo create alexmathieu22/home-ops --public --clone
+gh repo create alexmathieu22-ops/home-ops --public --clone
 cd home-ops
 asdf install   # picks up .tool-versions once it's committed
 ```

@@ -4,9 +4,9 @@
     "github>home-operations/renovate-presets#8.1.0",
     ":timezone(America/Toronto)",
     "docker:pinDigests",
-    "github>alexmathieu22/home-ops//.renovate/automerge.json5",
-    "github>alexmathieu22/home-ops//.renovate/grouping.json5",
-    "github>alexmathieu22/home-ops//.renovate/labels.json5",
+    "github>alexmathieu22-ops/home-ops//.renovate/automerge.json5",
+    "github>alexmathieu22-ops/home-ops//.renovate/grouping.json5",
+    "github>alexmathieu22-ops/home-ops//.renovate/labels.json5",
   ],
   // rebaseWhen defaults to "auto", which only proactively rebases PRs that have
   // automerge enabled; everything else only rebases on conflict. Since main requires

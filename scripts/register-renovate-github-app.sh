@@ -11,7 +11,7 @@
 set -euo pipefail
 
 APP_NAME="alex-trend-bot"
-REPO_URL="https://github.com/alexmathieu22/home-ops"
+REPO_URL="https://github.com/alexmathieu22-ops/home-ops"
 VAULT="home-ops"
 ITEM_TITLE="github-bot"
 PORT=18234
