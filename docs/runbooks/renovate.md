@@ -182,10 +182,14 @@ flowchart TD
     D --> F["Checks fail<br/>PR stays open, retried next run"]
 ```
 
-GitHub's native merge queue only requires the repo to be public (or GitHub Team/Enterprise
-Cloud for private) — this repo is public, so no third-party tooling or branch-protection
-trade-off is needed. Enable it via a repository ruleset targeting `main` with a
-`merge_queue` rule (squash merge, required status checks matching the two `ci.yaml` jobs).
+**Live**, managed as code in [`terraform/github`](../../terraform/github). GitHub's native
+merge queue turned out to need more than "public repo" — it's gated to repos owned by an
+organization (public org repo, or private with GitHub Enterprise Cloud); a public repo
+under a personal account still gets a bare `422 Invalid rule 'merge_queue'` with no useful
+detail. That's the actual reason this repo moved from `alexmathieu22` to the
+`alexmathieu22-ops` organization — not a rebrand, a hard requirement. Once org-owned, a
+`github_repository_ruleset` resource with a `merge_queue` rule (squash merge, required
+status checks matching the two `ci.yaml` jobs) works as expected.
 
 For reference: neither onedr0p/home-ops nor buroa/home-ops uses a merge queue at all —
 both have zero branch protection rules on `main`, so they never hit this problem in the
