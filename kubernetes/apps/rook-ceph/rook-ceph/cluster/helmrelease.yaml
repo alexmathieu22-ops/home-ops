@@ -1,14 +1,5 @@
-# CURRENT REAL HARDWARE: home-ops-1 (HP ProDesk 600 G4 Mini) has one 256GB disk, entirely
-# consumed by the Talos install -- zero spare block device, so it contributes no OSD.
-# home-ops-2 (Asus VivoBook S510U) has a spare 1TB HDD (/dev/sda) wiped and handed to
-# Rook via `useAllDevices: true` -- the only OSD in the cluster right now. With a single
-# OSD host, `failureDomain: host` can only ever place 1 replica, so `cephBlockPools`
-# below is deliberately `replicated.size: 1` (data-loss risk, single point of failure)
-# rather than the usual 3 -- bump back up (2 once home-ops-1 gets a second disk, 3 once a
-# 3rd OSD host exists) per HARDWARE_PLAN.md's node-2 notes. Same reason this can't be
-# validated on the local dev cluster: Docker-provisioned Talos nodes have no raw block
-# devices available either, so CephCluster will likely stay unhealthy there -- that's
-# expected, not a bug (see README.md's local-cluster caveats).
+# Hardware topology, replicated.size, and mon.allowMultiplePerNode rationale: see
+# IMPLEMENTATION_NOTES.md's Storage section.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -30,19 +21,9 @@ spec:
     cephClusterSpec:
       mon:
         count: 3
-        # Required for the local single-node Docker dev cluster (talosctl cluster create
-        # docker --workers 0): Rook refuses to schedule 3 mons on fewer than 3 nodes
-        # unless this is set, and without it the CephCluster gets permanently stuck
-        # ("cannot start 3 mons on 1 node(s)"), blocking the whole HelmRelease's `--wait`
-        # forever. Harmless to also carry into the real 3-node hardware config: Rook
-        # still prefers spreading mons across distinct nodes when enough exist, this only
-        # removes the hard block for when there aren't enough.
+        # Local dev cluster needs this (see IMPLEMENTATION_NOTES.md); harmless on real hardware.
         allowMultiplePerNode: true
-      # Confirmed live: draining a node with 2 of 3 mons dropped quorum, and the
-      # operator-managed mon PDB then refused to also evict the 3rd -- correctly, but
-      # it stalled the drain and needed a manual uncordon to unstick. Accepted tradeoff
-      # (2 real nodes, hardware constrained): let drains proceed and accept brief
-      # storage unavailability rather than have Rook's PDBs block node maintenance.
+      # See IMPLEMENTATION_NOTES.md's "Node drains and Rook-managed PDBs".
       disruptionManagement:
         managePodBudgets: false
       mgr:
@@ -56,14 +37,7 @@ spec:
       network:
         connections:
           requireMsgr2: true
-      # TOO_FEW_OSDS and POOL_NO_REDUNDANCY are permanent given the single-OSD topology
-      # above, not transient noise -- muting (not fixing) them is what makes HEALTH_OK
-      # achievable for tuppr's health checks. Unmute both once a 2nd/3rd OSD host exists
-      # and cephBlockPools' replicated.size below is bumped back up.
-      #
-      # The AUTH_INSECURE_* trio: CSI keys must stay on aes -- aes256k needs kernel 7.0+,
-      # nodes are on 6.18, and no Talos release (even v1.14 rc) ships that kernel yet.
-      # Hard blocker, not caution. Unmute once a Talos release does.
+      # See IMPLEMENTATION_NOTES.md's "Muted health warnings".
       healthCheck:
         muteHealthWarning:
           TOO_FEW_OSDS:
@@ -76,11 +50,7 @@ spec:
             policy: mute
           AUTH_INSECURE_KEYS_CREATABLE:
             policy: mute
-      # CVE-2025-30156 (weak integrity check on aes cephx service tickets): rotates the
-      # core daemon keys (mon/mgr/osd) to the new aes256k cipher. One-off, not ongoing --
-      # Ceph and Rook were already on CVE-fixed versions, only the keys hadn't rotated
-      # yet. CSI/client keys deliberately stay on aes (unset below, chart default) since
-      # our nodes run a kernel older than the 7.0+ AES256K requires.
+      # CVE-2025-30156 daemon key rotation -- see IMPLEMENTATION_NOTES.md.
       security:
         cephx:
           daemon:

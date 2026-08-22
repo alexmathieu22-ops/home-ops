@@ -13,8 +13,7 @@ cloudflare_zone_id = "xxxxx"
 
 # From `cloudflared tunnel list`, or a running pod's logs:
 #   kubectl logs -n networking -l app.kubernetes.io/name=cloudflared | grep tunnelID
-# Current home-ops tunnel ID, confirmed from the running pods' logs:
-tunnel_id = "4dab5d47-2d5b-42ee-a490-293ecb931719"
+tunnel_id = "xxxxx"
 
 domain = "alexandremathieu.com"
 
@@ -22,4 +21,4 @@ domain = "alexandremathieu.com"
 external_gateway_service = "envoy-networking-external-8c60613e.networking.svc.cluster.local"
 
 # Who can log into Access-protected apps (Gatus status page) via emailed one-time PIN.
-access_allowed_emails = ["alexandremathieu@outlook.com"]
+access_allowed_emails = ["you@example.com"]

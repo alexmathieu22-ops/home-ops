@@ -44,8 +44,8 @@
 ---
 
 Prices are USD street price as of mid-2026 unless noted; **Canadian pricing typically runs
-30–40% higher** on imported mini PCs due to exchange rate + import costs — budget accordingly
-for Montréal. All tiers assume **3 nodes minimum** (etcd quorum for Talos HA) and an apartment
+30–40% higher** on imported mini PCs due to exchange rate + import costs — budget accordingly.
+All tiers assume **3 nodes minimum** (etcd quorum for Talos HA) and an apartment
 setting, so noise and power draw matter as much as raw specs.
 
 ---

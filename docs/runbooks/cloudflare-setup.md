@@ -46,7 +46,7 @@ different things Cloudflare/`cloudflared` can hand you here, and only one is cor
 
 | What you might grab | Looks like | Correct? |
 | --- | --- | --- |
-| Tunnel ID (UUID) — from the dashboard's tunnel list, or the `TunnelID` field in the credentials JSON | `4dab5d47-2d5b-42ee-a...` (36 chars) | ❌ No |
+| Tunnel ID (UUID) — from the dashboard's tunnel list, or the `TunnelID` field in the credentials JSON | `a1b2c3d4-e5f6-...` (36 chars) | ❌ No |
 | `TunnelSecret` field alone — from the credentials file `cloudflared tunnel create` writes to `~/.cloudflared/<uuid>.json` | a ~44-char base64 string | ❌ No — that's for the separate credentials-file auth mode, not what this Deployment uses |
 | The actual **connector token** | a single ~150-200+ char base64 blob | ✅ Yes |
 

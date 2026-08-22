@@ -113,7 +113,7 @@ and end-to-end cloudflared tunnel routing.
    router to it
 5. AdGuard Home (`kubernetes/apps/networking/adguard-home`) — once it's `Ready`, check its
    assigned LoadBalancer IP (`kubectl get svc -n networking -l app.kubernetes.io/name=adguard-home`)
-   and set it as the **primary** DHCP DNS server on the router (Nokia-provided, ebox) —
+   and set it as the **primary** DHCP DNS server on the router (ISP-provided) —
    secondary should stay a public resolver (e.g. `1.1.1.1`) so general internet DNS keeps
    working via fallback if this pod is ever down. Also swap the placeholder IP in
    `kubernetes/apps/networking/adguard-home/app/helmrelease.yaml`'s DNS rewrite for the
