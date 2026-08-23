@@ -1,8 +1,40 @@
-# home-ops
+<div align="center">
 
-Personal homelab, fully as code: Talos Linux + Kubernetes, GitOps via Flux CD, secrets via
-1Password + External Secrets Operator, public exposure via Cloudflare Tunnel, VPN via
-self-hosted Headscale.
+<img src="docs/assets/header.jpg" align="center" width="560px" />
+
+### `home-ops` — with great power comes mild responsibility 🕷️
+
+_... managed with [Flux](https://fluxcd.io/), [Renovate](https://docs.renovatebot.com/), and [GitHub Actions](https://github.com/features/actions)_ 🤖
+
+<sub>Header photo: Peter Parker's apartment from the *Spider-Man: Brand New Day* pop-up tour</sub>
+
+</div>
+
+<div align="center">
+
+[![Talos](https://img.shields.io/badge/Talos-v1.13.9-4A154B)](https://www.talos.dev/)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-v1.36.3-326CE5)](https://kubernetes.io/)
+[![Flux](https://img.shields.io/badge/Flux-v2.9.4-5468FF)](https://fluxcd.io/)
+[![Nodes](https://img.shields.io/badge/Nodes-2-blue)](#hardware)
+[![Renovate](https://img.shields.io/github/actions/workflow/status/alexmathieu22-ops/home-ops/renovate.yaml?branch=main&label=renovate&color=1a1b27)](https://github.com/alexmathieu22-ops/home-ops/actions/workflows/renovate.yaml)
+
+</div>
+
+## Overview
+
+`home-ops` is my personal homelab, run entirely as code: [Talos Linux](https://www.talos.dev/)
++ Kubernetes, GitOps via [Flux CD](https://fluxcd.io/), secrets via 1Password + External
+Secrets Operator, public exposure via Cloudflare Tunnel, and VPN via a self-hosted
+Headscale. Every change ships through `git push` — see [Stack](#stack) below, [Repo
+layout](#repo-layout), and the [ADRs](docs/adr/README.md) for the how and why.
+
+This wouldn't exist without [onedr0p/home-ops](https://github.com/onedr0p/home-ops),
+[buroa/home-ops](https://github.com/buroa/home-ops), and the wider
+[home-operations](https://github.com/home-operations) community — their repos are the
+reference implementations I keep coming back to (and the first thing I point an AI
+assistant at) whenever I'm bootstrapping a new piece of this cluster. Most of the
+conventions here — the `kubernetes/apps` layout grouped by namespace, the Renovate setup,
+the Flux bootstrap structure — started as "how did they solve this" visits to their repos.
 
 ## Stack
 
@@ -17,7 +49,7 @@ self-hosted Headscale.
 | Storage          | [Rook-Ceph](https://rook.io/) (planned; 0 usable OSDs on current hardware) + [local-path-provisioner](https://github.com/rancher/local-path-provisioner) (interim, node-local, cluster default `StorageClass` for now) |
 | Ingress          | [Envoy Gateway](https://gateway.envoyproxy.io/) (Gateway API) — `internal` Gateway (VPN/tailnet only) + `external` Gateway (public, behind cloudflared) |
 | Observability    | [Gatus](https://github.com/TwiN/gatus) (status page) + metrics-server (`kubectl top`/k9s) |
-| LAN DNS          | [AdGuard Home](https://adguard.com/adguard-home/) — resolves `*.internal.alexandremathieu.com` (the ISP router can't do local DNS records) |
+| LAN DNS          | TBD — [AdGuard Home](https://adguard.com/adguard-home/) removed for now; deciding between redeploying it or moving to a [Ubiquiti](https://ui.com/) UDM (the ISP router can't do local DNS records) |
 | Dependency mgmt  | [Renovate](https://docs.renovatebot.com/)                   |
 | Tool versions    | [asdf](https://asdf-vm.com/)                                 |
 | VPN host provisioning | [OpenTofu](https://opentofu.org/) (Oracle Cloud VM + DNS only, see below) |
@@ -68,30 +100,15 @@ they arrive — nothing else in the repo changes.
 
 ## Local dev cluster
 
-Also still useful even with real hardware up — a disposable place to test a
-Renovate-proposed chart bump or a new app before it touches the real node. Runs as a
-real Talos + Kubernetes cluster locally:
+Disposable Talos + Kubernetes cluster for testing a Renovate chart bump or a new app
+locally before it touches real hardware — see
+[`docs/runbooks/cluster-bootstrap.md`](docs/runbooks/cluster-bootstrap.md#why-docker-not-qemu)
+for the why-Docker-not-QEMU details:
 
 ```bash
 talosctl cluster create docker --name home-ops-dev --workers 0 --memory-controlplanes 6GB \
   --config-patch '{"cluster":{"network":{"cni":{"name":"none"}},"proxy":{"disabled":true}}}'
 ```
-
-This is genuine Talos/Kubernetes, not a stand-in like kind/k3s. It's single-control-plane
-(not the 3-CP topology `talos/talconfig.yaml` describes for real hardware) — the QEMU
-provisioner that would give 3-CP locally hits a known kexec hang on macOS/Apple Silicon
-([siderolabs/talos#13108](https://github.com/siderolabs/talos/issues/13108)); Docker
-sidesteps it entirely (no VM boot/kexec involved) at the cost of not exercising etcd HA
-locally. `--memory-controlplanes` matters: the default 2GB is too tight once Flux and a
-few HelmReleases are running and causes controller crash loops. The `--config-patch`
-disables Talos's default Flannel/kube-proxy the same way `talos/talconfig.yaml` does for
-real hardware — full docs/runbooks/cluster-bootstrap.md#why-docker-not-qemu has the
-details, and see "Manual steps" below for why Cilium then needs a separate install step
-before Flux. Swapping `talos/talconfig.yaml` node definitions for real IPs is the only
-repo change needed once hardware exists. What can't be validated locally: etcd quorum
-across multiple nodes, Cilium L2 announcements on a real LAN, Rook-Ceph (no raw block
-devices in a Docker-provisioned node), Headscale subnet router reachability from outside,
-and end-to-end cloudflared tunnel routing.
 
 ## Manual steps (everything else is `git push`)
 
@@ -111,20 +128,7 @@ and end-to-end cloudflared tunnel routing.
    `tofu apply` the Oracle Cloud Always Free VM (outside the cluster by design, provisioned
    via [`terraform/headscale/`](terraform/headscale)), then wire the in-cluster subnet
    router to it
-5. AdGuard Home (`kubernetes/apps/networking/adguard-home`) — once it's `Ready`, check its
-   assigned LoadBalancer IP (`kubectl get svc -n networking -l app.kubernetes.io/name=adguard-home`)
-   and set it as the **primary** DHCP DNS server on the router (ISP-provided) —
-   secondary should stay a public resolver (e.g. `1.1.1.1`) so general internet DNS keeps
-   working via fallback if this pod is ever down. Also swap the placeholder IP in
-   `kubernetes/apps/networking/adguard-home/app/helmrelease.yaml`'s DNS rewrite for the
-   internal Gateway's actual assigned address once known.
-
-## Status
-
-Bootstrapping. Local dev cluster live with Flux reconciling; 1Password and Cloudflare are
-both set up and verified end-to-end (`cert-manager-config`, `cloudflared` both `Ready`).
-Headscale hosting location decided (Oracle Cloud Always Free VM, runbook above) but not
-yet provisioned. First real node (HP ProDesk 600 G4 Mini, single-node for now) purchased
-and `talos/talconfig.yaml` updated for it — not yet installed/bootstrapped, see
-`docs/runbooks/cluster-bootstrap.md`. Remaining: install Talos on the real node, stand up
-Headscale, and the apps themselves. See task list / commit history for current phase.
+5. LAN DNS — TBD (AdGuard Home removed, deciding between redeploying it or a Ubiquiti UDM).
+   Whichever it ends up being, set it as the **primary** DHCP DNS server on the router
+   (ISP-provided), keeping a public resolver (e.g. `1.1.1.1`) as secondary so general
+   internet DNS still works if it's ever down.
