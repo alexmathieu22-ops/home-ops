@@ -9,7 +9,7 @@ Accepted
 External Secrets Operator supports multiple ways to reach 1Password: the newer
 `onepasswordSDK` provider, the older Connect-based `onepassword` provider, a self-hosted
 1Password Connect server, or Vaultwarden. The tradeoffs among these are recorded in
-PROJECT_BRIEF.md's decision table.
+docs/planning/PROJECT_BRIEF.md's decision table.
 
 ## Decision
 

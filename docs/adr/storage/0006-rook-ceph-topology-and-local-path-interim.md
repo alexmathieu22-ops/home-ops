@@ -21,7 +21,7 @@ hardware — revisit once real usage is known (`ceph osd df`).
 
 `cephBlockPools` is deliberately `replicated.size: 1` (data-loss risk, single point of
 failure) rather than the usual 3 — bump back up (2 once `home-ops-1` gets a second disk,
-3 once a 3rd OSD host exists) per HARDWARE_PLAN.md's node-2 notes. Same reason this can't
+3 once a 3rd OSD host exists) per docs/planning/HARDWARE_PLAN.md's node-2 notes. Same reason this can't
 be validated on the local dev cluster: Docker-provisioned Talos nodes have no raw block
 devices available either, so CephCluster will likely stay unhealthy there — that's
 expected, not a bug (see README.md's local-cluster caveats). `mon.allowMultiplePerNode:
@@ -37,7 +37,7 @@ there aren't enough.
 (`local-path`); `ceph-block`'s `isDefault` is flipped to `false` in the same change,
 since two default StorageClasses is invalid/ambiguous -- the two flip back together once
 `ceph-block` is trusted enough to be the default. This is explicitly an amendment, not a
-replacement, of the Rook-Ceph decision in `PROJECT_BRIEF.md`'s decision table -- see that
+replacement, of the Rook-Ceph decision in `docs/planning/PROJECT_BRIEF.md`'s decision table -- see that
 file and `docs/runbooks/cluster-bootstrap.md`.
 
 Deployed via bjw-s's `app-template` (`oci://ghcr.io/bjw-s-labs/helm/app-template`), not a

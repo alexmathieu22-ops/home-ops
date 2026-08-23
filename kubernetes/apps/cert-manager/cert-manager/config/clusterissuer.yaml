@@ -1,4 +1,4 @@
-# DEFERRED: needs the Cloudflare API token -- see PROJECT_BRIEF.md's "Deferred" list.
+# DEFERRED: needs the Cloudflare API token -- see docs/planning/PROJECT_BRIEF.md's "Deferred" list.
 # Internal/VPN-only TLS only -- cloudflared terminates TLS at Cloudflare's edge for public traffic.
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer

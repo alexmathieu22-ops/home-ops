@@ -1,6 +1,6 @@
 # SOPS creation rules — scoped narrowly to Talos's own cluster secrets (talsecret.yaml),
 # not a general secrets-management system. App/household secrets still flow through
-# 1Password + External Secrets Operator (see PROJECT_BRIEF.md's "Zero SOPS" decision) --
+# 1Password + External Secrets Operator (see docs/planning/PROJECT_BRIEF.md's "Zero SOPS" decision) --
 # that's unchanged. This is a deliberate, narrow exception: Talos secrets have to exist
 # *before* the cluster (and therefore ESO) does, so ESO can't cover them. Matches
 # onedr0p/cluster-template's approach (age key + SOPS, committed encrypted) rather than

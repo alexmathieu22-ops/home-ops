@@ -24,7 +24,7 @@ colocated in each component's own `ks.yaml`, one apps tree grouped by K8s namesp
 `wait: true` + `healthCheckExprs` on these `-config` Kustomizations is deliberate, not a
 bug to route around: several (cert-manager's `ClusterIssuer`, external-secrets'
 `ClusterSecretStore`, cloudflared's tunnel token) genuinely can't go `Ready` until
-1Password/Cloudflare accounts exist (see PROJECT_BRIEF.md's "Deferred by user" list) — a
+1Password/Cloudflare accounts exist (see docs/planning/PROJECT_BRIEF.md's "Deferred by user" list) — a
 `healthCheckExprs` block checks the resource's real `Ready`/`Programmed` condition
 explicitly (Gateway API's `Programmed` isn't the generic `Ready` Flux auto-detects for
 most CRDs) so staying not-Ready is an accurate signal, not a false green.

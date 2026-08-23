@@ -284,7 +284,7 @@ this cluster too.
   by the Talos/OS install, so there's no raw block device left for Ceph. See the caveat
   comment in `kubernetes/apps/rook-ceph/rook-ceph/cluster/helmrelease.yaml`. Either leave
   Rook-Ceph's `Kustomization` unreconciled until you add a second disk (the box's second,
-  empty M.2 slot is the cleanest option — see HARDWARE_PLAN.md), or accept it staying
+  empty M.2 slot is the cleanest option — see docs/planning/HARDWARE_PLAN.md), or accept it staying
   unhealthy for now — it won't block anything else in the dependency chain.
   **Interim answer for anything that needs a PVC right now:**
   `kubernetes/apps/kube-system/local-path-provisioner` — node-local hostPath storage
@@ -292,7 +292,7 @@ this cluster too.
   (`local-path`) until Rook-Ceph has real OSDs. Needs the
   `machine.kubelet.extraMounts` patch in `talos/talconfig.yaml` applied to the node
   (`talhelper gencommand apply`) — it's a machine config change, Flux can't push it. Not
-  a replacement for the Rook-Ceph decision in `PROJECT_BRIEF.md` — swap PVCs back to
+  a replacement for the Rook-Ceph decision in `docs/planning/PROJECT_BRIEF.md` — swap PVCs back to
   `ceph-block` once real OSDs exist.
 - **8GB RAM is tight.** Watch for OOM/crash-looping controllers once Cilium,
   cert-manager, external-secrets, and observability are all running together. The
@@ -308,15 +308,15 @@ added piecemeal later — cheaper to include now than to build a new schematic a
 - **`siderolabs/intel-ucode`** — Intel CPU microcode (Spectre/Meltdown-class mitigations
   and stability fixes). Useful immediately.
 - **`siderolabs/i915`** — driver for the i5-8500T's UHD Graphics 630 iGPU, needed for
-  Jellyfin hardware transcoding (Quick Sync) — see HARDWARE_PLAN.md's note on this being
+  Jellyfin hardware transcoding (Quick Sync) — see docs/planning/HARDWARE_PLAN.md's note on this being
   a genuine upside of this particular CPU. Not used until Jellyfin is deployed; loading
   the driver for hardware that exists is harmless either way. When Jellyfin actually
   goes in, its pod spec also needs `resources.limits: {gpu.intel.com/i915: 1}` plus the
   Intel GPU device plugin — a Kubernetes-side task, separate from the extension itself.
 - **`siderolabs/nfs-utils`** (+ `nfsrahead`) — for mounting the planned NAS for bulk
-  media once it exists (see HARDWARE_PLAN.md). Idle until then.
+  media once it exists (see docs/planning/HARDWARE_PLAN.md). Idle until then.
 - **`siderolabs/nut-client`** — for monitoring a UPS once one's added (recommended
-  regardless of tier, per HARDWARE_PLAN.md, to protect etcd from unclean shutdowns).
+  regardless of tier, per docs/planning/HARDWARE_PLAN.md, to protect etcd from unclean shutdowns).
   Idle until then.
 
 Everything else in the Image Factory's extension list doesn't apply to this box or this
