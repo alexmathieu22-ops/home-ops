@@ -1,10 +1,7 @@
-# Renders README badges from live cluster metrics. Trimmed-down badge list: no Power (no
-# PDU/UPS exporter here), no Alerts (no Alertmanager -- see kube-prometheus-stack's
-# helmrelease), no status-page-style badges (that needs a multi-person "buddy" status
-# page, not applicable solo). Flux version isn't `flux_instance_info` -- that metric only
-# exists with fluxcd/flux-operator, and this repo runs classic self-managed Flux (`flux
-# bootstrap github`) -- so it's derived from kube-state-metrics' container image tag
-# instead.
+# Renders README badges from live cluster metrics. Flux version isn't `flux_instance_info`
+# -- that metric only exists with fluxcd/flux-operator, and this repo runs classic
+# self-managed Flux (`flux bootstrap github`) -- so it's derived from kube-state-metrics'
+# container image tag instead.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:

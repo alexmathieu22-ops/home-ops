@@ -1,7 +1,5 @@
-# Minimal slice of a typical kube-prometheus-stack: Prometheus + kube-state-metrics +
-# node-exporter only, to feed kromgo's badges. No Grafana (no dashboards needed here), no
-# Alertmanager (nothing alerts on it yet, and it's only what kromgo's own "Alerts" badge
-# would need -- dropped for now, see kromgo's helmrelease). Extends
+# Minimal kube-prometheus-stack (Prometheus + kube-state-metrics + node-exporter), sized
+# to feed kromgo's badges. Extends
 # docs/adr/observability/2026-08-13-gatus-instead-of-prometheus-loki.md now that node 2
 # exists (that ADR's own stated trigger) -- see
 # docs/adr/observability/2026-08-22-minimal-prometheus-for-kromgo.md.
