@@ -12,11 +12,21 @@ _... managed with [Flux](https://fluxcd.io/), [Renovate](https://docs.renovatebo
 
 <div align="center">
 
-[![Talos](https://img.shields.io/badge/Talos-v1.13.9-4A154B)](https://www.talos.dev/)
-[![Kubernetes](https://img.shields.io/badge/Kubernetes-v1.36.3-326CE5)](https://kubernetes.io/)
-[![Flux](https://img.shields.io/badge/Flux-v2.9.4-5468FF)](https://fluxcd.io/)
-[![Nodes](https://img.shields.io/badge/Nodes-2-blue)](#hardware)
+[![Talos](https://kromgo.alexandremathieu.com/badges/talos_version)](https://www.talos.dev/)
+[![Kubernetes](https://kromgo.alexandremathieu.com/badges/kubernetes_version)](https://kubernetes.io/)
+[![Flux](https://kromgo.alexandremathieu.com/badges/flux_version)](https://fluxcd.io/)
 [![Renovate](https://img.shields.io/github/actions/workflow/status/alexmathieu22-ops/home-ops/renovate.yaml?branch=main&label=renovate&color=1a1b27)](https://github.com/alexmathieu22-ops/home-ops/actions/workflows/renovate.yaml)
+
+</div>
+
+<div align="center">
+
+[![Age](https://kromgo.alexandremathieu.com/badges/cluster_birth_age)](docs/adr/observability/2026-08-22-minimal-prometheus-for-kromgo.md)
+[![Uptime](https://kromgo.alexandremathieu.com/badges/cluster_uptime_age)](docs/adr/observability/2026-08-22-minimal-prometheus-for-kromgo.md)
+[![Nodes](https://kromgo.alexandremathieu.com/badges/cluster_node_count)](#hardware)
+[![Pods](https://kromgo.alexandremathieu.com/badges/cluster_pod_count)](docs/adr/observability/2026-08-22-minimal-prometheus-for-kromgo.md)
+[![CPU](https://kromgo.alexandremathieu.com/badges/cluster_cpu_usage)](docs/adr/observability/2026-08-22-minimal-prometheus-for-kromgo.md)
+[![Memory](https://kromgo.alexandremathieu.com/badges/cluster_memory_usage)](docs/adr/observability/2026-08-22-minimal-prometheus-for-kromgo.md)
 
 </div>
 
@@ -48,7 +58,7 @@ the Flux bootstrap structure — started as "how did they solve this" visits to 
 | Secrets          | [1Password Service Account](https://developer.1password.com/docs/service-accounts/) via [External Secrets Operator](https://external-secrets.io/) (`1password-sdk` provider) — zero SOPS |
 | Storage          | [Rook-Ceph](https://rook.io/) (planned; 0 usable OSDs on current hardware) + [local-path-provisioner](https://github.com/rancher/local-path-provisioner) (interim, node-local, cluster default `StorageClass` for now) |
 | Ingress          | [Envoy Gateway](https://gateway.envoyproxy.io/) (Gateway API) — `internal` Gateway (VPN/tailnet only) + `external` Gateway (public, behind cloudflared) |
-| Observability    | [Gatus](https://github.com/TwiN/gatus) (status page) + metrics-server (`kubectl top`/k9s) |
+| Observability    | [Gatus](https://github.com/TwiN/gatus) (status page) + metrics-server (`kubectl top`/k9s) + a minimal [kube-prometheus-stack](https://github.com/prometheus-community/helm-charts) (Prometheus/kube-state-metrics/node-exporter only) feeding [kromgo](https://github.com/home-operations/kromgo) for the README badges above |
 | LAN DNS          | TBD — [AdGuard Home](https://adguard.com/adguard-home/) removed for now; deciding between redeploying it or moving to a [Ubiquiti](https://ui.com/) UDM (the ISP router can't do local DNS records) |
 | Dependency mgmt  | [Renovate](https://docs.renovatebot.com/)                   |
 | Tool versions    | [asdf](https://asdf-vm.com/)                                 |
