@@ -69,35 +69,21 @@ See [PROJECT_BRIEF.md](docs/planning/PROJECT_BRIEF.md), [E2E_PLAN.md](docs/plann
 for the full rationale, rollout plan, and per-component implementation gotchas (resource
 YAML itself keeps only short pointers, not full rationale).
 
-## Repo layout
+## Repo layout 🗂️
 
 ```
-home-ops/
-├── .tool-versions              # asdf-managed CLI versions
-├── talos/                      # talhelper config + generated machine configs (gitignored,
-│                                 # except talsecret.sops.yaml -- SOPS/age-encrypted, see
-│                                 # .sops.yaml -- committed on purpose)
-├── terraform/
-│   └── headscale/               # OpenTofu: Oracle Cloud VM + DNS for Headscale -- the one
-│                                 # place in the repo Terraform is used (real cloud
-│                                 # resources with real lifecycle; see secret-zero.md for
-│                                 # why it's not used for secrets)
-├── bootstrap/
-│   ├── kustomize/               # secret-zero: op inject + kubectl apply, no Terraform
-│   └── helmfile/                # installs Cilium before Flux exists (chicken-and-egg:
-│                                 # nothing gets pod networking without it, Flux included)
-├── kubernetes/
-│   ├── flux/cluster/           # Flux's own bootstrap manifests + the one top-level sync
-│   └── apps/                   # one tree grouped by K8s namespace (onedr0p/buroa convention):
-│                                # kube-system (cilium, metrics-server, local-path-provisioner),
-│                                # cert-manager, external-secrets,
-│                                # rook-ceph, networking (envoy-gateway, cloudflared,
-│                                # headscale-subnet-router, gateway-api-crds), observability
-│                                # (gatus), default (home apps)
-│                                # -- each component as <name>/{ks.yaml, app/, config/}
-├── .github/workflows/          # Renovate, CI (kubeconform validation)
-└── docs/runbooks/              # the handful of manual, non-GitOps steps
+talos/                 🐧 Talos + talhelper config
+terraform/headscale/   ☁️  OpenTofu (Headscale VM only)
+bootstrap/             🚀 pre-Flux: secret-zero + Cilium
+kubernetes/
+├── flux/              🔄 Flux's own bootstrap
+└── apps/              📦 apps, grouped by namespace
+docs/                  📚 ADRs, runbooks, planning
+scripts/               🔧 one-off helpers
+.github/workflows/     🤖 Renovate + CI
 ```
+
+See the [ADRs](docs/adr/README.md) for the why behind any of these.
 
 ## Hardware
 
