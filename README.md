@@ -68,33 +68,34 @@ As a diagram — how traffic and changes actually flow through the pieces above:
 
 ```mermaid
 flowchart TD
-    GH[GitHub repo] -->|git push| Flux[Flux CD]
+    Renovate[Renovate] -->|dependency PRs| GH[GitHub repo]
+    GH -->|git push| Flux[Flux CD]
 
     subgraph cluster["Kubernetes (Talos Linux + Cilium)"]
         Flux --> Apps[Apps]
         Apps --> Storage[(local-path-provisioner<br/>+ Rook-Ceph, planned)]
+
+        Cloudflared[cloudflared] --> GWext[Envoy Gateway<br/>external]
+        Sub[Tailscale subnet router] --> GWint[Envoy Gateway<br/>internal]
+        GWext --> Apps
+        GWint --> Apps
+
+        ESO[External Secrets<br/>Operator] --> Apps
+
+        Apps --> Gatus[Gatus]
+        Apps --> Prom[kube-prometheus-stack]
+        Prom --> Kromgo[kromgo]
     end
 
-    subgraph traffic["Traffic in"]
-        Internet((Internet)) --> CF[Cloudflare Tunnel]
-        VPNClients[VPN clients] --> HS[Headscale<br/>Oracle Cloud VM, via OpenTofu]
-        HS --> Sub[Tailscale subnet router]
-    end
+    Internet((Internet)) --> CFedge[Cloudflare edge]
+    CFedge --> Cloudflared
 
-    CF --> GWext[Envoy Gateway<br/>external]
-    Sub --> GWint[Envoy Gateway<br/>internal]
-    GWext --> Apps
-    GWint --> Apps
+    VPNClients[VPN clients] --> HS[Headscale<br/>Oracle Cloud VM, via OpenTofu]
+    HS -.->|coordinates| Sub
 
-    OP[1Password] --> ESO[External Secrets<br/>Operator]
-    ESO --> Apps
+    OP[1Password] --> ESO
 
-    Apps --> Gatus[Gatus]
-    Apps --> Prom[kube-prometheus-stack]
-    Prom --> Kromgo[kromgo]
     Kromgo --> Badges[README badges]
-
-    Renovate[Renovate] -->|dependency PRs| GH
 ```
 
 See [PROJECT_BRIEF.md](docs/planning/PROJECT_BRIEF.md), [E2E_PLAN.md](docs/planning/E2E_PLAN.md),
