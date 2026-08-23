@@ -9,8 +9,7 @@ Accepted
 ## Context
 
 The README header wanted live cluster badges (node count, CPU/memory usage, component
-versions) like onedr0p/buroa/deedee-ops, via
-[kromgo](https://github.com/home-operations/kromgo). Kromgo isn't standalone: every
+versions) via [kromgo](https://github.com/home-operations/kromgo). Kromgo isn't standalone: every
 badge is a PromQL query, so it requires a real Prometheus to query. This repo has
 [docs/adr/observability/2026-08-13-gatus-instead-of-prometheus-loki.md](2026-08-13-gatus-instead-of-prometheus-loki.md),
 which explicitly ran Gatus instead of kube-prometheus-stack + Loki because "on this
@@ -35,21 +34,21 @@ explicit resource requests/limits on every component (Prometheus, the operator,
 kube-state-metrics, node-exporter), same discipline as every other HelmRelease in this
 repo.
 
-Kromgo's badge list is trimmed from onedr0p/buroa's: no `Power` (no PDU/UPS exporter
-here), no `Alerts` (see above), no `buddy_*` status-page badges (those track a
-multi-person "is my friend's stuff up" status page, not applicable solo). Kept: Talos,
-Kubernetes, Flux, Nodes, Pods, CPU, Memory, Age, Uptime. The Flux version badge can't
-reuse their `flux_instance_info` query -- that metric is only emitted by
+Kromgo's badge list is trimmed down: no `Power` (no PDU/UPS exporter here), no `Alerts`
+(see above), no `buddy_*` status-page badges (those track a multi-person "is my friend's
+stuff up" status page, not applicable solo). Kept: Talos, Kubernetes, Flux, Nodes, Pods,
+CPU, Memory, Age, Uptime. The Flux version badge can't use a `flux_instance_info` query
+-- that metric is only emitted by
 [fluxcd/flux-operator](https://github.com/fluxcd/flux-operator), and this repo runs
 classic self-managed Flux (`flux bootstrap github`), which doesn't run that operator.
 Instead it's derived from kube-state-metrics' `kube_pod_container_info`, matching the
 `source-controller` pod's image tag (`ghcr.io/fluxcd/source-controller:v1.9.4@sha256:...`)
 via `label_replace` -- every Flux GOTK controller container is named `manager` (verified
 against `kubernetes/flux/cluster/flux-system/gotk-components.yaml`), so this generalizes
-to any of them. CPU/memory usage badges also avoid onedr0p's
-`instance:node_cpu_utilisation:rate5m`-style recording rules (bundled Prometheus rules
-whose exact names could drift across chart versions) in favor of the underlying raw
-node-exporter metrics directly.
+to any of them. CPU/memory usage badges also avoid `instance:node_cpu_utilisation:rate5m`-style
+recording rules (a common kube-prometheus-stack pattern, but bundled rules whose exact
+names could drift across chart versions) in favor of the underlying raw node-exporter
+metrics directly.
 
 Exposed via HTTPRoute on the `external` Gateway only (`kromgo.alexandremathieu.com`) --
 GitHub has to fetch the badge images from the public internet to render them in the
