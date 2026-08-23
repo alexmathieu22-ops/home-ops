@@ -1,4 +1,6 @@
-# 0003. Raise UDP buffer sysctls for cloudflared's QUIC transport
+# Raise UDP buffer sysctls for cloudflared's QUIC transport
+
+Date: 2026-08-02
 
 ## Status
 

@@ -1,4 +1,6 @@
-# 0007. Disable Rook-managed PDBs to unblock node drains
+# Disable Rook-managed PDBs to unblock node drains
+
+Date: 2026-08-19
 
 ## Status
 
@@ -13,7 +15,7 @@ correctly, but it stalled the drain and needed a manual uncordon to unstick.
 ## Decision
 
 Accepted tradeoff given the current 2-node hardware constraint (see
-[0006](0006-rook-ceph-topology-and-local-path-interim.md)): `disruptionManagement.
+[rook-ceph-topology-and-local-path-interim](2026-08-19-rook-ceph-topology-and-local-path-interim.md)): `disruptionManagement.
 managePodBudgets: false` lets drains proceed and accepts brief storage unavailability
 rather than having Rook's PDBs block node maintenance.
 

@@ -1,4 +1,6 @@
-# 0016. Add a Flux GitHub webhook receiver for immediate reconcile
+# Add a Flux GitHub webhook receiver for immediate reconcile
+
+Date: 2026-08-13
 
 ## Status
 
@@ -17,7 +19,7 @@ buroa/k8s-gitops. The `Receiver`'s `resources` list only needs the `GitRepositor
 every downstream `Kustomization`: kustomize-controller already watches it for revision
 changes, so anything sourced from it reconciles right after. Routed through the same
 `external` Gateway + cloudflared tunnel as any other public app (see
-[0013](0013-gateway-api-internal-external-split.md)) — a Service named
+[gateway-api-internal-external-split](2026-08-16-gateway-api-internal-external-split.md)) — a Service named
 `webhook-receiver`, separate from notification-controller's own (see
 `gotk-components.yaml`), on its dedicated `http-webhook` port. Manual GitHub-side step
 (token generation, webhook creation) is `docs/runbooks/flux-webhook.md`, same shape as

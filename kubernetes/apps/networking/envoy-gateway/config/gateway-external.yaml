@@ -1,4 +1,4 @@
-# Public ingress, plain HTTP -- Cloudflare terminates TLS at its edge. See docs/adr/networking/0013-gateway-api-internal-external-split.md.
+# Public ingress, plain HTTP -- Cloudflare terminates TLS at its edge. See docs/adr/networking/2026-08-16-gateway-api-internal-external-split.md.
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:

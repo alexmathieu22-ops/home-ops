@@ -16,7 +16,7 @@ spec:
       retries: 3
   values:
     # Chart-bundled CRDs (Envoy Gateway's own + Gateway API experimental channel) via
-    # Helm's native crds/ dir -- see docs/adr/networking/0013-gateway-api-internal-external-split.md.
+    # Helm's native crds/ dir -- see docs/adr/networking/2026-08-16-gateway-api-internal-external-split.md.
     crds:
       enabled: true
     config:

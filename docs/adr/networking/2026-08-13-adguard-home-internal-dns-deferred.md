@@ -1,4 +1,6 @@
-# 0014. Run AdGuard Home for internal DNS resolution (deferred)
+# Run AdGuard Home for internal DNS resolution (deferred)
+
+Date: 2026-08-13
 
 ## Status
 
@@ -8,7 +10,7 @@ Consequences).
 ## Context
 
 The internal Gateway's wildcard hostname (`*.internal.alexandremathieu.com`, see
-[0013](0013-gateway-api-internal-external-split.md)) needs to resolve somewhere. The
+[gateway-api-internal-external-split](2026-08-16-gateway-api-internal-external-split.md)) needs to resolve somewhere. The
 ISP-provided router has no local-DNS-record capability at all (confirmed against the
 vendor's own docs).
 
@@ -36,6 +38,6 @@ apps without an official upstream chart.
 Removed (`chore(networking): remove adguard-home, deferred pending real router
 hardware`) -- deferred until a UniFi gateway replaces the ISP router, which is expected
 to provide local DNS records natively and remove the need for this component entirely.
-Its removal is why [0009](../home-assistant/0009-home-assistant-loadbalancer-exposure.md) exposes Home
+Its removal is why [home-assistant-loadbalancer-exposure](../home-assistant/2026-08-14-home-assistant-loadbalancer-exposure.md) exposes Home
 Assistant via a bare LoadBalancer IP instead of a Gateway route: there is currently no
 working network-wide internal DNS to depend on.

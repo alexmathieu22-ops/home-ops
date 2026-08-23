@@ -1,4 +1,6 @@
-# 0012. Keep Home Assistant's `.venv` on scratch/`emptyDir`, not the persistent PVC
+# Keep Home Assistant's `.venv` on scratch/`emptyDir`, not the persistent PVC
+
+Date: 2026-08-14
 
 ## Status
 
@@ -15,12 +17,12 @@ restart, but local-path's PVC directory isn't chowned to uid 1000 the way `empty
 
 Reverted rather than fight local-path's permission model — matches buroa's actual
 pattern. This is fine now that liveness/startup are lenient (see
-[0011](0011-home-assistant-probe-strategy.md)): a restart means a slow venv rebuild, not
+[home-assistant-probe-strategy](2026-08-14-home-assistant-probe-strategy.md)): a restart means a slow venv rebuild, not
 a crash loop.
 
 ## Consequences
 
 Every pod restart rebuilds the Python venv from scratch, which is why the extended
-HelmRelease timeout ([0010](0010-home-assistant-extended-timeout.md)) and lenient
-liveness/startup probes ([0011](0011-home-assistant-probe-strategy.md)) both matter here.
+HelmRelease timeout ([home-assistant-extended-timeout](2026-08-14-home-assistant-extended-timeout.md)) and lenient
+liveness/startup probes ([home-assistant-probe-strategy](2026-08-14-home-assistant-probe-strategy.md)) both matter here.
 Revisit if local-path's permission model changes, or once storage moves to `ceph-block`.

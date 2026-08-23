@@ -1,4 +1,6 @@
-# 0005. Add `machine.kubelet.extraMounts` for local-path-provisioner
+# Add `machine.kubelet.extraMounts` for local-path-provisioner
+
+Date: 2026-08-13
 
 ## Status
 

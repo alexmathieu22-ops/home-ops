@@ -1,4 +1,6 @@
-# 0006. Rook-Ceph hardware topology, `replicated.size`, and the local-path-provisioner interim
+# Rook-Ceph hardware topology, `replicated.size`, and the local-path-provisioner interim
+
+Date: 2026-08-19
 
 ## Status
 
@@ -54,6 +56,6 @@ on anyone's packaging of it.
 A single-OSD, `replicated.size: 1` pool has no redundancy — losing `home-ops-2`'s HDD
 loses the data on `ceph-block`. `local-path` remains the cluster default StorageClass
 until `ceph-block` is trusted enough to take over. See also
-[0008](0008-rook-ceph-muted-health-warnings.md) for the health-check warnings this
-topology permanently trips, and [0007](0007-rook-ceph-node-drains-and-pdbs.md) for the
+[rook-ceph-muted-health-warnings](2026-08-19-rook-ceph-muted-health-warnings.md) for the health-check warnings this
+topology permanently trips, and [rook-ceph-node-drains-and-pdbs](2026-08-19-rook-ceph-node-drains-and-pdbs.md) for the
 node-drain implications of a 2-node/3-mon cluster.

@@ -1,4 +1,6 @@
-# 0015. Run a plain Tailscale client as a Headscale subnet router
+# Run a plain Tailscale client as a Headscale subnet router
+
+Date: 2026-08-01
 
 ## Status
 

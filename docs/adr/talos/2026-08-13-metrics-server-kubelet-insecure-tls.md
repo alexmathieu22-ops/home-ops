@@ -1,4 +1,6 @@
-# 0004. Run metrics-server with `--kubelet-insecure-tls`
+# Run metrics-server with `--kubelet-insecure-tls`
+
+Date: 2026-08-13
 
 ## Status
 

@@ -1,4 +1,6 @@
-# 0011. Lenient liveness/startup, strict readiness only, `/` instead of `/healthz`
+# Lenient liveness/startup, strict readiness only, `/` instead of `/healthz`
+
+Date: 2026-08-14
 
 ## Status
 
@@ -26,5 +28,5 @@ on a stock install — confirmed working via curl.
 
 A fresh install works out of the box without needing hass-simple-healthcheck installed
 first. This is fine given the lenient liveness/startup probes (see
-[0010](0010-home-assistant-extended-timeout.md) for the related timeout headroom): a slow
+[home-assistant-extended-timeout](2026-08-14-home-assistant-extended-timeout.md) for the related timeout headroom): a slow
 boot or venv rebuild withholds traffic via readiness rather than triggering a restart.

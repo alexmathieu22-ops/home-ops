@@ -1,4 +1,6 @@
-# 0001. Split `ks.yaml` into two Kustomizations to avoid CRD/CR races
+# Split `ks.yaml` into two Kustomizations to avoid CRD/CR races
+
+Date: 2026-08-02
 
 ## Status
 

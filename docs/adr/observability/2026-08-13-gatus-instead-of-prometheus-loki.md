@@ -1,4 +1,6 @@
-# 0018. Run Gatus instead of kube-prometheus-stack + Loki
+# Run Gatus instead of kube-prometheus-stack + Loki
+
+Date: 2026-08-13
 
 ## Status
 

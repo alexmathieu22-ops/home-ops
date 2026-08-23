@@ -1,4 +1,6 @@
-# 0010. Extend Home Assistant's HelmRelease timeout to 10m
+# Extend Home Assistant's HelmRelease timeout to 10m
+
+Date: 2026-08-14
 
 ## Status
 
@@ -8,7 +10,7 @@ Accepted
 
 First boot (venv build + HA's own init) can take longer than Flux's 5m default wait.
 Helm giving up mid-boot and remediating (uninstall + retry) was compounding with the
-venv-rebuild-on-restart issue (see [0012](0012-home-assistant-venv-on-emptydir.md)).
+venv-rebuild-on-restart issue (see [home-assistant-venv-on-emptydir](2026-08-14-home-assistant-venv-on-emptydir.md)).
 
 ## Decision
 

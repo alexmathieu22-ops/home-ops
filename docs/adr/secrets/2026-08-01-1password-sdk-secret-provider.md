@@ -1,4 +1,6 @@
-# 0017. Use ESO's 1Password SDK provider for secrets
+# Use ESO's 1Password SDK provider for secrets
+
+Date: 2026-08-01
 
 ## Status
 

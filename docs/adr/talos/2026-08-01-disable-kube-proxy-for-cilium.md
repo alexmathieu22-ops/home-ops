@@ -1,4 +1,6 @@
-# 0002. Disable kube-proxy in favor of Cilium's replacement
+# Disable kube-proxy in favor of Cilium's replacement
+
+Date: 2026-08-01
 
 ## Status
 
