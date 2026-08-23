@@ -87,12 +87,13 @@ See the [ADRs](docs/adr/README.md) for the why behind any of these.
 
 ## Hardware
 
-Running single-node for now on a **HP ProDesk 600 G4 Mini** (i5-8500T, 8GB RAM, 256GB
-SSD). `talos/talconfig.yaml`'s `nodes:` block has just this one real node; see
-[`docs/runbooks/cluster-bootstrap.md`](docs/runbooks/cluster-bootstrap.md) for the
-bare-metal install steps and known single-node limitations (no etcd HA, no spare disk
-for Rook-Ceph OSDs yet, 8GB RAM is tight). More nodes get appended to the same file when
-they arrive — nothing else in the repo changes.
+Two nodes: **home-ops-1** (HP ProDesk 600 G4 Mini, i5-8500T, 8GB RAM, 256GB SSD) as the
+sole control-plane, and **home-ops-2** (Asus VivoBook S510U, 256GB SSD) as a worker.
+Worker-only for now — a 2-node etcd cluster has *worse* fault tolerance than 1-node
+(needs both members up), so it's promoted to control-plane only once a 3rd node exists.
+See [`docs/runbooks/cluster-bootstrap.md`](docs/runbooks/cluster-bootstrap.md) for the
+bare-metal install steps; more nodes get appended to `talos/talconfig.yaml`'s `nodes:`
+block when they arrive — nothing else in the repo changes.
 
 ## Local dev cluster
 
