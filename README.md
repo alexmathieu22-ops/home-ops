@@ -64,49 +64,91 @@ the Flux bootstrap structure — started as "how did they solve this" visits to 
 | Tool versions    | [asdf](https://asdf-vm.com/)                                 |
 | VPN host provisioning | [OpenTofu](https://opentofu.org/) (Oracle Cloud VM + DNS only, see below) |
 
+As a diagram — how traffic and changes actually flow through the pieces above:
+
+```mermaid
+flowchart TD
+    Renovate[Renovate] -->|dependency PRs| GH[GitHub repo]
+    GH -->|git push| Flux[Flux CD]
+
+    subgraph cluster["Kubernetes (Talos Linux + Cilium)"]
+        Flux --> Apps[Apps]
+        Apps --> Storage[(local-path-provisioner<br/>+ Rook-Ceph, planned)]
+
+        Cloudflared[cloudflared] --> GWext[Envoy Gateway<br/>external]
+        Sub[Tailscale subnet router] --> GWint[Envoy Gateway<br/>internal]
+        GWext --> Apps
+        GWint --> Apps
+
+        ESO[External Secrets<br/>Operator] --> Apps
+
+        Apps --> Gatus[Gatus]
+        Apps --> Prom[kube-prometheus-stack]
+        Prom --> Kromgo[kromgo]
+    end
+
+    Internet((Internet)) --> CFedge[Cloudflare edge]
+    CFedge --> Cloudflared
+
+    VPNClients[VPN clients] --> HS[Headscale<br/>Oracle Cloud VM, via OpenTofu]
+    HS -.->|coordinates| Sub
+
+    OP[1Password] --> ESO
+
+    Kromgo --> Badges[README badges]
+```
+
 See [PROJECT_BRIEF.md](docs/planning/PROJECT_BRIEF.md), [E2E_PLAN.md](docs/planning/E2E_PLAN.md),
 [HARDWARE_PLAN.md](docs/planning/HARDWARE_PLAN.md), and the [ADRs](docs/adr/README.md)
 for the full rationale, rollout plan, and per-component implementation gotchas (resource
 YAML itself keeps only short pointers, not full rationale).
 
-## Repo layout
+## Repo layout 🗂️
 
 ```
-home-ops/
-├── .tool-versions              # asdf-managed CLI versions
-├── talos/                      # talhelper config + generated machine configs (gitignored,
-│                                 # except talsecret.sops.yaml -- SOPS/age-encrypted, see
-│                                 # .sops.yaml -- committed on purpose)
-├── terraform/
-│   └── headscale/               # OpenTofu: Oracle Cloud VM + DNS for Headscale -- the one
-│                                 # place in the repo Terraform is used (real cloud
-│                                 # resources with real lifecycle; see secret-zero.md for
-│                                 # why it's not used for secrets)
-├── bootstrap/
-│   ├── kustomize/               # secret-zero: op inject + kubectl apply, no Terraform
-│   └── helmfile/                # installs Cilium before Flux exists (chicken-and-egg:
-│                                 # nothing gets pod networking without it, Flux included)
-├── kubernetes/
-│   ├── flux/cluster/           # Flux's own bootstrap manifests + the one top-level sync
-│   └── apps/                   # one tree grouped by K8s namespace (onedr0p/buroa convention):
-│                                # kube-system (cilium, metrics-server, local-path-provisioner),
-│                                # cert-manager, external-secrets,
-│                                # rook-ceph, networking (envoy-gateway, cloudflared,
-│                                # headscale-subnet-router, gateway-api-crds), observability
-│                                # (gatus), default (home apps)
-│                                # -- each component as <name>/{ks.yaml, app/, config/}
-├── .github/workflows/          # Renovate, CI (kubeconform validation)
-└── docs/runbooks/              # the handful of manual, non-GitOps steps
+talos/                 🐧 Talos + talhelper config
+terraform/headscale/   ☁️  OpenTofu (Headscale VM only)
+bootstrap/             🚀 pre-Flux: secret-zero + Cilium
+kubernetes/
+├── flux/              🔄 Flux's own bootstrap
+└── apps/              📦 apps, grouped by namespace
+docs/                  📚 ADRs, runbooks, planning
+scripts/               🔧 one-off helpers
+.github/workflows/     🤖 Renovate + CI
 ```
+
+See the [ADRs](docs/adr/README.md) for the why behind any of these.
 
 ## Hardware
 
-Running single-node for now on a **HP ProDesk 600 G4 Mini** (i5-8500T, 8GB RAM, 256GB
-SSD). `talos/talconfig.yaml`'s `nodes:` block has just this one real node; see
-[`docs/runbooks/cluster-bootstrap.md`](docs/runbooks/cluster-bootstrap.md) for the
-bare-metal install steps and known single-node limitations (no etcd HA, no spare disk
-for Rook-Ceph OSDs yet, 8GB RAM is tight). More nodes get appended to the same file when
-they arrive — nothing else in the repo changes.
+Two nodes: **home-ops-1** (HP ProDesk 600 G4 Mini, i5-8500T, 8GB RAM, 256GB SSD) as the
+sole control-plane, and **home-ops-2** (Asus VivoBook S510U, 256GB SSD) as a worker.
+Worker-only for now — a 2-node etcd cluster has *worse* fault tolerance than 1-node
+(needs both members up), so it's promoted to control-plane only once a 3rd node exists.
+See [`docs/runbooks/cluster-bootstrap.md`](docs/runbooks/cluster-bootstrap.md) for the
+bare-metal install steps; more nodes get appended to `talos/talconfig.yaml`'s `nodes:`
+block when they arrive — nothing else in the repo changes.
+
+## Cloud dependencies
+
+Everything runs at home except the handful of external services below — none of them
+strictly need to cost money.
+
+| Service                                                     | Used for                          | Cost                                  |
+| ------------------------------------------------------------ | ---------------------------------- | -------------------------------------- |
+| [Oracle Cloud](https://www.oracle.com/cloud/free/)          | Headscale VM ([`terraform/headscale/`](terraform/headscale)) | Free (Always Free tier)   |
+| [GitHub](https://github.com/)                                | Repo hosting, Actions (Renovate/CI) | Free                                   |
+| Domain (`alexandremathieu.com`)                              | Public hostname / DNS              | ~$15 CAD/yr                            |
+| [1Password](https://1password.com/)                          | Secrets (ESO Service Account)      | Free (student pack) or ~$3.56/mo otherwise |
+
+```mermaid
+pie title Annual cost if paying full price (CAD)
+    "Domain (~$15/yr)" : 15
+    "1Password (~$42.72/yr)" : 42.72
+```
+
+Oracle Cloud and GitHub are free at any tier used here, so they don't show up above —
+right now the actual total is just the domain, since 1Password is on a student plan.
 
 ## Local dev cluster
 
@@ -138,7 +180,10 @@ talosctl cluster create docker --name home-ops-dev --workers 0 --memory-controlp
    `tofu apply` the Oracle Cloud Always Free VM (outside the cluster by design, provisioned
    via [`terraform/headscale/`](terraform/headscale)), then wire the in-cluster subnet
    router to it
-5. LAN DNS — TBD (AdGuard Home removed, deciding between redeploying it or a Ubiquiti UDM).
+5. [Add personal devices to the tailnet](docs/runbooks/headscale-oracle-cloud.md#8-add-personal-devices-to-the-tailnet) —
+   `tailscale up --login-server=https://headscale.alexandremathieu.com` on each device
+   (the first one ties to the `home-ops` user)
+6. LAN DNS — TBD (AdGuard Home removed, deciding between redeploying it or a Ubiquiti UDM).
    Whichever it ends up being, set it as the **primary** DHCP DNS server on the router
    (ISP-provided), keeping a public resolver (e.g. `1.1.1.1`) as secondary so general
    internet DNS still works if it's ever down.
