@@ -11,8 +11,6 @@ spec:
   prune: true
   wait: true
   targetNamespace: cert-manager
-  dependsOn:
-    - name: cilium
   sourceRef:
     kind: GitRepository
     name: flux-system

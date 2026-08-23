@@ -10,8 +10,6 @@ spec:
   prune: true
   wait: true
   targetNamespace: system-upgrade
-  dependsOn:
-    - name: cilium
   sourceRef:
     kind: GitRepository
     name: flux-system
