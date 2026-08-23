@@ -1,5 +1,5 @@
 # Privileged PodSecurity scoped to this namespace only, for headscale-subnet-router's
-# NET_ADMIN/NET_RAW + /dev/net/tun needs -- see IMPLEMENTATION_NOTES.md.
+# NET_ADMIN/NET_RAW + /dev/net/tun needs -- see docs/adr/networking/2026-08-01-headscale-subnet-router.md.
 apiVersion: v1
 kind: Namespace
 metadata:

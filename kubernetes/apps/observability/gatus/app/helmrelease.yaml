@@ -153,7 +153,7 @@ spec:
           http:
             port: *port
     # gatus-sidecar needs cluster-wide read on HTTPRoutes/Gateways to watch them -- see
-    # IMPLEMENTATION_NOTES.md. Scoped to just what we actually use (no Ingress/Service/
+    # docs/adr/observability/2026-08-13-gatus-instead-of-prometheus-loki.md. Scoped to just what we actually use (no Ingress/Service/
     # Traefik IngressRoute discovery, unlike gatus-sidecar's own upstream RBAC example).
     rbac:
       roles:

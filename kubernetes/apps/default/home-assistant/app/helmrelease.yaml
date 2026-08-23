@@ -1,4 +1,5 @@
-# Design decisions and probe/venv rationale: see IMPLEMENTATION_NOTES.md's Home Assistant section.
+# Design decisions and probe/venv rationale: see docs/adr/home-assistant/2026-08-14-home-assistant-loadbalancer-exposure.md
+# and the neighboring ADRs in docs/adr/home-assistant/.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -6,7 +7,7 @@ metadata:
   namespace: default
 spec:
   interval: 1h
-  # First-boot venv build can exceed Flux's 5m default wait -- see IMPLEMENTATION_NOTES.md.
+  # First-boot venv build can exceed Flux's 5m default wait -- see docs/adr/home-assistant/2026-08-14-home-assistant-extended-timeout.md.
   timeout: 10m
   chartRef:
     kind: OCIRepository
@@ -29,7 +30,7 @@ spec:
             env:
               TZ: America/Toronto
             # Probe design (lenient liveness/startup, strict readiness only, / not
-            # /healthz) -- see IMPLEMENTATION_NOTES.md's Home Assistant section.
+            # /healthz) -- see docs/adr/home-assistant/2026-08-14-home-assistant-probe-strategy.md.
             probes:
               liveness:
                 enabled: true
@@ -75,7 +76,7 @@ spec:
         ports:
           http:
             port: *port
-    # .venv on scratch/emptyDir, not the persistent PVC -- see IMPLEMENTATION_NOTES.md.
+    # .venv on scratch/emptyDir, not the persistent PVC -- see docs/adr/home-assistant/2026-08-14-home-assistant-venv-on-emptydir.md.
     persistence:
       config:
         type: persistentVolumeClaim
