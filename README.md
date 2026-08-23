@@ -95,6 +95,27 @@ See [`docs/runbooks/cluster-bootstrap.md`](docs/runbooks/cluster-bootstrap.md) f
 bare-metal install steps; more nodes get appended to `talos/talconfig.yaml`'s `nodes:`
 block when they arrive — nothing else in the repo changes.
 
+## Cloud dependencies
+
+Everything runs at home except the handful of external services below — none of them
+strictly need to cost money.
+
+| Service                                                     | Used for                          | Cost                                  |
+| ------------------------------------------------------------ | ---------------------------------- | -------------------------------------- |
+| [Oracle Cloud](https://www.oracle.com/cloud/free/)          | Headscale VM ([`terraform/headscale/`](terraform/headscale)) | Free (Always Free tier)   |
+| [GitHub](https://github.com/)                                | Repo hosting, Actions (Renovate/CI) | Free                                   |
+| Domain (`alexandremathieu.com`)                              | Public hostname / DNS              | ~$15 CAD/yr                            |
+| [1Password](https://1password.com/)                          | Secrets (ESO Service Account)      | Free (student pack) or ~$3.56/mo otherwise |
+
+```mermaid
+pie title Annual cost if paying full price (CAD)
+    "Domain (~$15/yr)" : 15
+    "1Password (~$42.72/yr)" : 42.72
+```
+
+Oracle Cloud and GitHub are free at any tier used here, so they don't show up above —
+right now the actual total is just the domain, since 1Password is on a student plan.
+
 ## Local dev cluster
 
 Disposable Talos + Kubernetes cluster for testing a Renovate chart bump or a new app
