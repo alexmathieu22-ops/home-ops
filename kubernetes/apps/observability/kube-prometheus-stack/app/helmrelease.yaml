@@ -23,6 +23,12 @@ spec:
     fullnameOverride: kube-prometheus-stack
     crds:
       enabled: true
+    # No Alertmanager deployed, so the chart's ~40 bundled alerting PrometheusRules
+    # (etcd, kube-apiserver, kubelet, alertmanager itself, ...) have nothing to fire
+    # into -- pure dead weight, and each one is a PrometheusRule the apiserver validates
+    # through prometheusOperator's admission webhook on every install/upgrade.
+    defaultRules:
+      create: false
     alertmanager:
       enabled: false
     grafana:

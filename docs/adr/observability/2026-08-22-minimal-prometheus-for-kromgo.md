@@ -23,9 +23,15 @@ now exists, which is that ADR's own stated trigger.
 Add `kube-prometheus-stack`, but only the slice kromgo actually needs: Prometheus +
 kube-state-metrics + node-exporter. Explicitly disabled: Grafana (no dashboards needed,
 badges are the whole point), Alertmanager (nothing alerts on it yet -- also means
-dropping kromgo's own "Alerts" badge, since that queries `alertmanager_alerts`), and
+dropping kromgo's own "Alerts" badge, since that queries `alertmanager_alerts`),
 `kubeProxy` monitoring (Cilium replaces kube-proxy, nothing to scrape --
-[docs/adr/talos/2026-08-01-disable-kube-proxy-for-cilium.md](../talos/2026-08-01-disable-kube-proxy-for-cilium.md)).
+[docs/adr/talos/2026-08-01-disable-kube-proxy-for-cilium.md](../talos/2026-08-01-disable-kube-proxy-for-cilium.md)),
+and `defaultRules.create` (the chart's ~40 bundled alerting `PrometheusRule` objects --
+useless with no Alertmanager to act on them, and each one is validated through
+`prometheusOperator`'s admission webhook on install/upgrade; a burst of them landing
+before that webhook's self-signed cert finishes syncing produced a string of `remote
+error: tls: bad certificate` log lines on first install -- transient and harmless, but
+removing the unused rules removes that noise too).
 Prometheus itself: `replicas: 1`, `retention: 6h`, `storageSpec: {}` (ephemeral,
 `emptyDir`) -- kromgo only ever queries the *current* value, never history, so losing
 Prometheus's own data on a pod restart is a non-issue; a PVC isn't even an option yet
