@@ -36,7 +36,7 @@ spec:
 
         - title: Flux
           id: flux_version
-          query: label_replace(kube_pod_container_info{namespace="flux-system", container="manager", image=~".*source-controller.*"}, "version", "$1", "image", ".*:(v[0-9.]+)@.*")
+          query: label_replace(kube_pod_container_info{namespace="flux-system", container="manager", image=~".*source-controller.*"}, "version", "$1", "image", ".*:(v[0-9.]+)$")
           valueExpr: labels["version"]
           icon: si:flux
 

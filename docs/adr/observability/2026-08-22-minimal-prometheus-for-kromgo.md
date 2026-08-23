@@ -48,10 +48,13 @@ CPU, Memory, Age, Uptime. The Flux version badge can't use a `flux_instance_info
 [fluxcd/flux-operator](https://github.com/fluxcd/flux-operator), and this repo runs
 classic self-managed Flux (`flux bootstrap github`), which doesn't run that operator.
 Instead it's derived from kube-state-metrics' `kube_pod_container_info`, matching the
-`source-controller` pod's image tag (`ghcr.io/fluxcd/source-controller:v1.9.4@sha256:...`)
-via `label_replace` -- every Flux GOTK controller container is named `manager` (verified
-against `kubernetes/flux/cluster/flux-system/gotk-components.yaml`), so this generalizes
-to any of them. CPU/memory usage badges also avoid `instance:node_cpu_utilisation:rate5m`-style
+`source-controller` pod's `image` label (`ghcr.io/fluxcd/source-controller:v1.9.4` --
+no digest; that's the separate `image_id`/`image_spec` labels, confirmed by querying
+Prometheus directly after the first version of this regex assumed a digest suffix and
+failed with `expression_error`) via `label_replace` -- every Flux GOTK controller
+container is named `manager` (verified against
+`kubernetes/flux/cluster/flux-system/gotk-components.yaml`), so this generalizes to any
+of them. CPU/memory usage badges also avoid `instance:node_cpu_utilisation:rate5m`-style
 recording rules (a common kube-prometheus-stack pattern, but bundled rules whose exact
 names could drift across chart versions) in favor of the underlying raw node-exporter
 metrics directly.
