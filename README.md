@@ -64,6 +64,39 @@ the Flux bootstrap structure — started as "how did they solve this" visits to 
 | Tool versions    | [asdf](https://asdf-vm.com/)                                 |
 | VPN host provisioning | [OpenTofu](https://opentofu.org/) (Oracle Cloud VM + DNS only, see below) |
 
+As a diagram — how traffic and changes actually flow through the pieces above:
+
+```mermaid
+flowchart TD
+    GH[GitHub repo] -->|git push| Flux[Flux CD]
+
+    subgraph cluster["Kubernetes (Talos Linux + Cilium)"]
+        Flux --> Apps[Apps]
+        Apps --> Storage[(local-path-provisioner<br/>+ Rook-Ceph, planned)]
+    end
+
+    subgraph traffic["Traffic in"]
+        Internet((Internet)) --> CF[Cloudflare Tunnel]
+        VPNClients[VPN clients] --> HS[Headscale<br/>Oracle Cloud VM, via OpenTofu]
+        HS --> Sub[Tailscale subnet router]
+    end
+
+    CF --> GWext[Envoy Gateway<br/>external]
+    Sub --> GWint[Envoy Gateway<br/>internal]
+    GWext --> Apps
+    GWint --> Apps
+
+    OP[1Password] --> ESO[External Secrets<br/>Operator]
+    ESO --> Apps
+
+    Apps --> Gatus[Gatus]
+    Apps --> Prom[kube-prometheus-stack]
+    Prom --> Kromgo[kromgo]
+    Kromgo --> Badges[README badges]
+
+    Renovate[Renovate] -->|dependency PRs| GH
+```
+
 See [PROJECT_BRIEF.md](docs/planning/PROJECT_BRIEF.md), [E2E_PLAN.md](docs/planning/E2E_PLAN.md),
 [HARDWARE_PLAN.md](docs/planning/HARDWARE_PLAN.md), and the [ADRs](docs/adr/README.md)
 for the full rationale, rollout plan, and per-component implementation gotchas (resource
