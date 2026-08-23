@@ -125,7 +125,10 @@ talosctl cluster create docker --name home-ops-dev --workers 0 --memory-controlp
    `tofu apply` the Oracle Cloud Always Free VM (outside the cluster by design, provisioned
    via [`terraform/headscale/`](terraform/headscale)), then wire the in-cluster subnet
    router to it
-5. LAN DNS — TBD (AdGuard Home removed, deciding between redeploying it or a Ubiquiti UDM).
+5. [Add personal devices to the tailnet](docs/runbooks/headscale-oracle-cloud.md#8-add-personal-devices-to-the-tailnet) —
+   `tailscale up --login-server=https://headscale.alexandremathieu.com` on each device
+   (the first one ties to the `home-ops` user)
+6. LAN DNS — TBD (AdGuard Home removed, deciding between redeploying it or a Ubiquiti UDM).
    Whichever it ends up being, set it as the **primary** DHCP DNS server on the router
    (ISP-provided), keeping a public resolver (e.g. `1.1.1.1`) as secondary so general
    internet DNS still works if it's ever down.
