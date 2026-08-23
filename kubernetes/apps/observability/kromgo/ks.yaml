@@ -1,7 +1,7 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: home-assistant
+  name: kromgo
   namespace: flux-system
 spec:
   interval: 1h
@@ -9,11 +9,12 @@ spec:
   retryInterval: 2m
   prune: true
   wait: true
-  targetNamespace: default
+  targetNamespace: observability
   dependsOn:
-    # local-path, not ceph-block -- see helmrelease.yaml's persistence.config comment.
-    - name: local-path-provisioner
+    - name: kube-prometheus-stack
+    # for the HTTPRoute's parentRef (the external Gateway) to actually exist first
+    - name: envoy-gateway-config
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./kubernetes/apps/default/home-assistant/app
+  path: ./kubernetes/apps/observability/kromgo/app

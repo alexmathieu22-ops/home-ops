@@ -43,3 +43,4 @@ directly from the code it explains.
 ## Observability
 
 - [2026-08-13. Run Gatus instead of kube-prometheus-stack + Loki](observability/2026-08-13-gatus-instead-of-prometheus-loki.md)
+- [2026-08-22. Add a minimal Prometheus (kube-prometheus-stack) to feed kromgo's README badges](observability/2026-08-22-minimal-prometheus-for-kromgo.md)

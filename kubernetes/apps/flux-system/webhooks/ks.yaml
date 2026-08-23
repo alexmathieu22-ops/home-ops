@@ -11,7 +11,6 @@ spec:
   wait: true
   targetNamespace: flux-system
   dependsOn:
-    - name: cilium
     - name: external-secrets-config
     # for the HTTPRoute's parentRef (the external Gateway) to actually exist first
     - name: envoy-gateway-config
