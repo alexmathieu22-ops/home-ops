@@ -1,22 +1,20 @@
 {
-  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
   extends: [
-    "github>home-operations/renovate-presets#8.1.0",
-    ":timezone(America/Toronto)",
-    "docker:pinDigests",
-    "github>alexmathieu22-ops/home-ops//.renovate/automerge.json5",
-    "github>alexmathieu22-ops/home-ops//.renovate/grouping.json5",
-    "github>alexmathieu22-ops/home-ops//.renovate/labels.json5",
+    'github>home-operations/renovate-presets#8.1.0',
+    ':timezone(America/Toronto)',
+    'docker:pinDigests',
+    'github>alexmathieu22-ops/home-ops//.renovate/automerge.json5',
+    'github>alexmathieu22-ops/home-ops//.renovate/grouping.json5',
+    'github>alexmathieu22-ops/home-ops//.renovate/labels.json5',
   ],
-  // rebaseWhen defaults to "auto", which only proactively rebases PRs that have
-  // automerge enabled; everything else only rebases on conflict. Since main requires
-  // branches to be up to date before merging, non-automerge PRs would otherwise go
-  // stale every time something else merges and need a manual "Update branch" click.
-  rebaseWhen: "behind-base-branch",
+  rebaseWhen: 'behind-base-branch',
   packageRules: [
     {
-      description: "The annotated `# renovate: datasource=... depName=...` regex manager has no digest capture group, so pinDigests has nowhere to write the digest and fails the whole branch (see ghcr.io/siderolabs/installer and ghcr.io/siderolabs/kubelet in tuppr upgrades).",
-      matchManagers: ["regex"],
+      description: 'The annotated `# renovate: datasource=... depName=...` regex manager has no digest capture group, so pinDigests has nowhere to write the digest and fails the whole branch (see ghcr.io/siderolabs/installer and ghcr.io/siderolabs/kubelet in tuppr upgrades).',
+      matchManagers: [
+        'custom.regex',
+      ],
       pinDigests: false,
     },
   ],
