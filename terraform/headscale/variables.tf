@@ -67,3 +67,15 @@ variable "cloudflare_zone_id" {
   description = "Zone ID for `domain`, from the Cloudflare dashboard's zone overview page"
   type        = string
 }
+
+variable "minecraft_public_port" {
+  description = "Public TCP port the VM relays to the in-cluster Minecraft server. Deliberately not 25565 -- fewer drive-by scanners; clients find it via the SRV record in dns.tf"
+  type        = number
+  default     = 41337
+}
+
+variable "minecraft_backend" {
+  description = "Minecraft Service's LB-IPAM IP:port on the home LAN, reached over the tailnet via the subnet router -- must match lbipam.cilium.io/ips in kubernetes/apps/default/minecraft/app/helmrelease.yaml"
+  type        = string
+  default     = "192.168.18.220:25565"
+}

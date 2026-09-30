@@ -42,6 +42,8 @@ resource "oci_core_instance" "headscale" {
       headscale_fqdn    = "${var.headscale_subdomain}.${var.domain}"
       root_domain       = var.domain
       headscale_version = var.headscale_version
+      minecraft_port    = var.minecraft_public_port
+      minecraft_backend = var.minecraft_backend
     }))
   }
 

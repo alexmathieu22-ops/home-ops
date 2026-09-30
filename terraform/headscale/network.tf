@@ -81,6 +81,16 @@ resource "oci_core_security_list" "headscale" {
       max = 41641
     }
   }
+
+  # Minecraft relay -- see docs/adr/minecraft/2026-09-30-minecraft-oracle-relay.md.
+  ingress_security_rules {
+    protocol = "6" # TCP
+    source   = "0.0.0.0/0"
+    tcp_options {
+      min = var.minecraft_public_port
+      max = var.minecraft_public_port
+    }
+  }
 }
 
 resource "oci_core_subnet" "headscale" {

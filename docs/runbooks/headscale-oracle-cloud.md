@@ -234,6 +234,37 @@ not a daily-driver streaming VPN. Once real hardware + a home subnet router exis
 likely the more valuable exit node to use day-to-day (a home IP, not a datacenter VPS IP,
 and dedicated resources not shared with anything critical).
 
+## 10. Minecraft relay
+
+The VM also relays public TCP `41337` to the in-cluster Minecraft server (see
+[minecraft-oracle-relay](../adr/minecraft/2026-09-30-minecraft-oracle-relay.md)). `tofu
+apply` creates the OCI firewall rule and the `mc` A + SRV records; cloud-init sets up the
+relay itself on a fresh VM. On an existing VM (cloud-init only runs on first boot, and
+`user_data` is in `ignore_changes`), do it by hand:
+
+```bash
+ssh ubuntu@$(tofu output -raw public_ip)
+sudo apt-get install -y socat
+sudo ufw allow 41337/tcp
+sudo tailscale set --accept-routes   # reach 192.168.18.0/24 via the subnet router
+```
+
+Then write `/etc/systemd/system/minecraft-relay.service` with the exact unit from
+`cloud-init.yaml.tftpl`'s Minecraft relay section (substituting `41337` and
+`192.168.18.220:25565`), and:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now minecraft-relay
+```
+
+Verify from the VM that the backend is reachable over the tailnet, then from outside:
+
+```bash
+nc -zv 192.168.18.220 25565          # on the VM
+nc -zv mc.alexandremathieu.com 41337 # from anywhere
+```
+
 ## Notes
 
 - **Oracle's stock image pre-blocks non-SSH ports**: the base Ubuntu image ships
