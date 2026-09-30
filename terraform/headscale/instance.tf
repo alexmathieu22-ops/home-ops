@@ -48,10 +48,18 @@ resource "oci_core_instance" "headscale" {
   }
 
   lifecycle {
-    # cloud-init only runs on first boot, so a template edit can't reach the running VM
-    # anyway -- and letting it through would risk replacing the instance (new IP, Headscale
-    # DB gone). Apply template changes to the live VM by hand (see the runbook); a
-    # deliberate `tofu apply -replace` still builds from the current template.
-    ignore_changes = [metadata["user_data"]]
+    # user_data: cloud-init only runs on first boot, so a template edit can't reach the
+    # running VM anyway -- and letting it through would risk replacing the instance (new
+    # IP, Headscale DB gone). Apply template changes to the live VM by hand (see the
+    # runbook); a deliberate `tofu apply -replace` still builds from the current template.
+    #
+    # source_id: the image data source above always resolves to the newest Ubuntu build,
+    # so a new Oracle release would otherwise plan an in-place image change on the running
+    # VM -- which can swap the boot volume holding Headscale's SQLite DB. The image only
+    # matters at first boot.
+    ignore_changes = [
+      metadata["user_data"],
+      source_details[0].source_id,
+    ]
   }
 }
