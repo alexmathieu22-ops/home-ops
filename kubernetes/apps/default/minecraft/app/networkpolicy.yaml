@@ -1,0 +1,29 @@
+# Egress lockdown: if the server is ever compromised through a game-protocol bug
+# (Log4Shell-style), it can't reach the home LAN or other pods -- only DNS and the public
+# internet (Mojang auth, server jar downloads). Ingress is left alone; replies to incoming
+# player connections are allowed by connection tracking regardless.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: minecraft
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: minecraft
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    - toCIDRSet:
+        - cidr: 0.0.0.0/0
+          except:
+            - 10.0.0.0/8
+            - 172.16.0.0/12
+            - 192.168.0.0/16
+            - 100.64.0.0/10
