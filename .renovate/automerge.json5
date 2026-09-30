@@ -47,6 +47,15 @@
       ignoreTests: false,
     },
     {
+      description: "Auto-merge CLI tool minor/patch bumps in .tool-versions",
+      matchManagers: ["asdf"],
+      matchUpdateTypes: ["minor", "patch"],
+      automerge: true,
+      automergeType: "pr",
+      minimumReleaseAge: "3 days",
+      ignoreTests: false,
+    },
+    {
       description: "Never auto-merge Talos node version bumps (tuppr TalosUpgrade) -- OS-level, can strand a node",
       matchFileNames: ["kubernetes/apps/system-upgrade/tuppr/upgrades/talosupgrade.yaml"],
       automerge: false,
