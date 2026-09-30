@@ -38,8 +38,8 @@ spec:
               MEMORY: 3G
               ENABLE_WHITELIST: "true"
               ENFORCE_WHITELIST: "true"
-              WHITELIST: NocturnalWeeb
-              OPS: NocturnalWeeb
+              WHITELIST: Nocturnal022
+              OPS: Nocturnal022
             probes:
               liveness: &probe
                 enabled: true
