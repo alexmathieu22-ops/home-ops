@@ -1,0 +1,101 @@
+# Exposure (public via a relay on the Headscale VM, not the external Gateway): see
+# docs/adr/minecraft/2026-09-30-minecraft-oracle-relay.md.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: minecraft
+  namespace: default
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: minecraft
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    fullnameOverride: minecraft
+    controllers:
+      minecraft:
+        pod:
+          # home-ops-1 (8GB) already carries the control plane, Prometheus and Home Assistant.
+          nodeSelector:
+            kubernetes.io/hostname: home-ops-2
+        containers:
+          app:
+            image:
+              repository: docker.io/itzg/minecraft-server
+              tag: 2026.9.2@sha256:de5d1b1a83eba576f6c8a688fac2a3523ce457724cdebc8ea48d7818b74cdf6e
+            env:
+              TZ: America/Toronto
+              EULA: "TRUE"
+              TYPE: VANILLA
+              # Pinned: a world opened by a newer server can't be downgraded, and clients must match.
+              VERSION: "26.3"
+              MEMORY: 3G
+              ENABLE_WHITELIST: "true"
+              ENFORCE_WHITELIST: "true"
+              WHITELIST: NocturnalWeeb
+              OPS: NocturnalWeeb
+            probes:
+              liveness: &probe
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command: ["mc-health"]
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+              readiness: *probe
+              # First start downloads the server jar and generates the world.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command: ["mc-health"]
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 60
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 500m
+                memory: 3Gi
+              limits:
+                # 3G heap + JVM overhead.
+                memory: 4Gi
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+    service:
+      app:
+        controller: minecraft
+        type: LoadBalancer
+        annotations:
+          # Fixed IP the Headscale VM relays to (terraform/headscale's minecraft_backend).
+          # Top of the pool, away from the IPs LB-IPAM hands out from the bottom.
+          lbipam.cilium.io/ips: 192.168.18.220
+        ports:
+          minecraft:
+            port: 25565
+            protocol: TCP
+    persistence:
+      data:
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        size: 10Gi
+        storageClass: local-path
+        globalMounts:
+          - path: /data

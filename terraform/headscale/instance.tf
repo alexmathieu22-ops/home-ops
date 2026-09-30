@@ -42,6 +42,16 @@ resource "oci_core_instance" "headscale" {
       headscale_fqdn    = "${var.headscale_subdomain}.${var.domain}"
       root_domain       = var.domain
       headscale_version = var.headscale_version
+      minecraft_port    = var.minecraft_public_port
+      minecraft_backend = var.minecraft_backend
     }))
+  }
+
+  lifecycle {
+    # cloud-init only runs on first boot, so a template edit can't reach the running VM
+    # anyway -- and letting it through would risk replacing the instance (new IP, Headscale
+    # DB gone). Apply template changes to the live VM by hand (see the runbook); a
+    # deliberate `tofu apply -replace` still builds from the current template.
+    ignore_changes = [metadata["user_data"]]
   }
 }

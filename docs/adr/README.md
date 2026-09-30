@@ -29,6 +29,10 @@ directly from the code it explains.
 - [2026-08-14. Lenient liveness/startup, strict readiness only, `/` instead of `/healthz`](home-assistant/2026-08-14-home-assistant-probe-strategy.md)
 - [2026-08-14. Keep Home Assistant's `.venv` on scratch/`emptyDir`, not the persistent PVC](home-assistant/2026-08-14-home-assistant-venv-on-emptydir.md)
 
+## Minecraft
+
+- [2026-09-30. Expose Minecraft publicly through a relay on the Headscale VM](minecraft/2026-09-30-minecraft-oracle-relay.md)
+
 ## Networking
 
 - [2026-08-16. Split Gateway API into internal and external Gateways](networking/2026-08-16-gateway-api-internal-external-split.md)
