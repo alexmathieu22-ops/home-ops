@@ -1,6 +1,6 @@
 talosctl 1.14.2
 talhelper 3.1.17
-flux2 2.9.5
+flux2 2.9.6
 kubectl 1.37.1
 helm 4.3.0
 helmfile 1.8.1
