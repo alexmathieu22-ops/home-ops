@@ -131,7 +131,13 @@ runcmd:
     Wants=network-online.target
 
     [Service]
-    ExecStart=/usr/bin/socat TCP-LISTEN:${minecraft_port},fork,reuseaddr TCP:${minecraft_backend}
+    # Flood protection: at most 10 concurrent connections per source IP (the iptables rule
+    # lives and dies with this service, no separate persistence), and max-children caps
+    # total relay processes so a distributed flood can't exhaust the VM's 1GB of RAM.
+    # The "+" prefix runs these two as root despite DynamicUser.
+    ExecStartPre=+/bin/sh -c 'iptables -C INPUT -p tcp --syn --dport ${minecraft_port} -m connlimit --connlimit-above 10 -j REJECT 2>/dev/null || iptables -I INPUT 1 -p tcp --syn --dport ${minecraft_port} -m connlimit --connlimit-above 10 -j REJECT'
+    ExecStopPost=+/bin/sh -c 'iptables -D INPUT -p tcp --syn --dport ${minecraft_port} -m connlimit --connlimit-above 10 -j REJECT || true'
+    ExecStart=/usr/bin/socat TCP-LISTEN:${minecraft_port},fork,reuseaddr,max-children=30 TCP:${minecraft_backend}
     DynamicUser=yes
     Restart=always
 
