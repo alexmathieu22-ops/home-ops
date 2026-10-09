@@ -40,7 +40,7 @@ spec:
               MEMORY: 3G
               ENABLE_WHITELIST: "true"
               ENFORCE_WHITELIST: "true"
-              WHITELIST: Nocturnal022,ReeelaxMait,bloktom,TitophOfficial,Nelvania,Griefaas
+              WHITELIST: Nocturnal022,ReeelaxMait,bloktom,TitophOfficial,Nelvania,Griefaas,KindredScarab18,Boby2222
               OPS: Nocturnal022
             probes:
               liveness: &probe
