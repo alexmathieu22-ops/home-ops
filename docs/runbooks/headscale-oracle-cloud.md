@@ -258,6 +258,13 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now minecraft-relay
 ```
 
+The unit also limits flooding: an `iptables` `connlimit` rule (max 10 concurrent connections
+per source IP on the relay port, inserted/removed by the unit's `ExecStartPre`/`ExecStopPost`
+so nothing needs persisting) and `socat`'s `max-children=30` (total cap, protects the VM's
+1GB of RAM). If a legitimate group behind one IP (shared NAT) gets refused, raise the
+per-IP number. It won't stop a large distributed flood -- only something in front of the
+VM (Cloudflare Spectrum) does.
+
 Verify from the VM that the backend is reachable over the tailnet, then from outside:
 
 ```bash

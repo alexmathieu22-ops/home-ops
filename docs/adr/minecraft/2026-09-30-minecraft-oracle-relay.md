@@ -59,6 +59,10 @@ live VM by hand per the runbook.
 
 - Minecraft (and the tailnet) now share one point of failure: the VM. Its 50 Mbps cap and
   1/8 OCPU are ample for a handful of players; relaying is near-zero CPU.
+- Flood protection is basic: the relay unit limits concurrent connections per source IP
+  (`iptables` connlimit) and in total (`socat` `max-children`). Cloudflare's DDoS
+  protection doesn't apply -- the `mc` record is DNS-only, so game traffic never touches
+  Cloudflare; only Spectrum (paid) would put it in front.
 - The server sees every player as coming from the relay, so IP bans are meaningless —
   moderation is by account (whitelist/ban by name).
 - The world lives on home-ops-2's disk with no backup until a backup sidecar
