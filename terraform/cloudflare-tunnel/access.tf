@@ -45,3 +45,34 @@ resource "cloudflare_zero_trust_access_application" "gatus" {
     }
   ]
 }
+
+# Same edge gate as Gatus for the budget app, with its own allow-list: the budget is
+# shared with people who shouldn't also get the status page, and vice versa. The app
+# has no login of its own -- this is its only auth on the public hostname.
+resource "cloudflare_zero_trust_access_application" "budget" {
+  account_id       = var.cloudflare_account_id
+  name             = "Budget"
+  type             = "self_hosted"
+  session_duration = "720h"
+
+  destinations = [
+    {
+      type = "public"
+      uri  = "budget.${var.domain}"
+    }
+  ]
+
+  policies = [
+    {
+      name       = "Allow budget users"
+      precedence = 1
+      decision   = "allow"
+
+      include = [
+        for email in var.budget_allowed_emails : {
+          email = { email = email }
+        }
+      ]
+    }
+  ]
+}
