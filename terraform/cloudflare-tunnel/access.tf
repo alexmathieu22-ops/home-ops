@@ -49,11 +49,25 @@ resource "cloudflare_zero_trust_access_application" "gatus" {
 # Same edge gate as Gatus for the budget app, with its own allow-list: the budget is
 # shared with people who shouldn't also get the status page, and vice versa. The app
 # has no login of its own -- this is its only auth on the public hostname.
+# The emailed one-time PIN. Without it the account's only login method is
+# "Cloudflare" -- a Cloudflare account login -- which people outside this
+# account can't use.
+resource "cloudflare_zero_trust_access_identity_provider" "one_time_pin" {
+  account_id = var.cloudflare_account_id
+  name       = "One-time PIN"
+  type       = "onetimepin"
+  config     = {}
+}
+
 resource "cloudflare_zero_trust_access_application" "budget" {
   account_id       = var.cloudflare_account_id
   name             = "Budget"
   type             = "self_hosted"
   session_duration = "720h"
+
+  # Straight to "enter your email": its users don't have Cloudflare accounts.
+  allowed_idps              = [cloudflare_zero_trust_access_identity_provider.one_time_pin.id]
+  auto_redirect_to_identity = true
 
   destinations = [
     {
