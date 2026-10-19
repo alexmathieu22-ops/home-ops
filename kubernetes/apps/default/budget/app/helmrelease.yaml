@@ -26,7 +26,7 @@ spec:
           app:
             image:
               repository: ghcr.io/alexmathieu22/budget
-              tag: 0.5.0@sha256:fd2ba4044516ed85a173e4873055289dba270d60b11fa49c8cbaa844d6375925
+              tag: 0.6.0@sha256:d74269de20c4dc4411f1eb5e7b993ce5a465514c38aad8d72e6c0224533a50c4
             env:
               TZ: America/Toronto
             probes:
