@@ -33,6 +33,10 @@ directly from the code it explains.
 
 - [2026-09-30. Expose Minecraft publicly through a relay on the Headscale VM](minecraft/2026-09-30-minecraft-oracle-relay.md)
 
+## Budget
+
+- [2026-10-18. Run the budget app from its own repo's image, behind Cloudflare Access](budget/2026-10-18-budget-app-image.md)
+
 ## Networking
 
 - [2026-08-16. Split Gateway API into internal and external Gateways](networking/2026-08-16-gateway-api-internal-external-split.md)

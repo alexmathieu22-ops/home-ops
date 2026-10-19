@@ -34,3 +34,8 @@ variable "access_allowed_emails" {
   description = "Email addresses allowed to log into Access-protected apps (e.g. the Gatus status page) via Cloudflare's emailed one-time PIN -- no external IdP required."
   type        = list(string)
 }
+
+variable "budget_allowed_emails" {
+  description = "Email addresses allowed into the budget app (budget.<domain>) via Cloudflare's emailed one-time PIN. Kept separate from access_allowed_emails so sharing the budget doesn't also share the status page."
+  type        = list(string)
+}

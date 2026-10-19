@@ -22,3 +22,6 @@ external_gateway_service = "envoy-networking-external-8c60613e.networking.svc.cl
 
 # Who can log into Access-protected apps (Gatus status page) via emailed one-time PIN.
 access_allowed_emails = ["you@example.com"]
+
+# Who can log into the budget app (budget.<domain>): you and Fannie.
+budget_allowed_emails = ["you@example.com", "fannie@example.com"]

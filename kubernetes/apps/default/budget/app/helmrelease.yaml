@@ -1,0 +1,104 @@
+# App source and image: https://github.com/alexmathieu22/budget (private) -- see
+# docs/adr/budget/ for why it's its own repo and how it's protected.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: budget
+  namespace: default
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: budget
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    fullnameOverride: budget
+    controllers:
+      budget:
+        # SQLite on a RWO volume: never run two pods against it.
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              repository: ghcr.io/alexmathieu22/budget
+              tag: 0.2.0@sha256:9868d1aca91384f10144e889b3109137e139cde5cedf78c92eb62fd8cb6cfea6
+            env:
+              TZ: America/Toronto
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: &port 8080
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              readiness: *probes
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 10m
+              limits:
+                memory: 128Mi
+    defaultPodOptions:
+      # Private image -- see externalsecret.yaml.
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+    service:
+      app:
+        controller: budget
+        ports:
+          http:
+            port: *port
+    # The app has no login of its own. Public traffic is gated by the Cloudflare Access
+    # app in terraform/cloudflare-tunnel/access.tf -- apply that BEFORE this route lands,
+    # since the wildcard DNS record already points budget.<domain> at the tunnel.
+    route:
+      app:
+        # Gatus would only ever see the Access login page here -- it watches the
+        # internal route below instead.
+        annotations:
+          gatus.home-operations.com/enabled: "false"
+        hostnames:
+          - budget.alexandremathieu.com
+        parentRefs:
+          - name: external
+            namespace: networking
+            sectionName: http
+      # Tailnet access skips Cloudflare Access -- being on the tailnet is trusted.
+      app-internal:
+        hostnames:
+          - budget.internal.alexandremathieu.com
+        parentRefs:
+          - name: internal
+            namespace: networking
+            sectionName: https
+    persistence:
+      data:
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        size: 1Gi
+        storageClass: local-path
+        globalMounts:
+          - path: /data
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp
