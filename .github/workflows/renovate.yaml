@@ -52,6 +52,8 @@ jobs:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           GITHUB_BOT_APP_CLIENT_ID: op://home-ops/github-bot/GITHUB_BOT_APP_CLIENT_ID
           GITHUB_BOT_APP_PRIVATE_KEY: op://home-ops/github-bot/GITHUB_BOT_APP_PRIVATE_KEY
+          GHCR_USERNAME: op://home-ops/ghcr-pull-token/username
+          GHCR_TOKEN: op://home-ops/ghcr-pull-token/credential
 
       - name: Generate Token
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
@@ -76,6 +78,8 @@ jobs:
         uses: renovatebot/github-action@1c0cf989c02653fba0efe7ca5772338860ca71dc # v46.3.12
         env:
           LOG_LEVEL: ${{ inputs.logLevel || 'debug' }}
+          # Read-only PAT so Renovate can list tags of the private budget image.
+          RENOVATE_CONFIG: '{"hostRules":[{"matchHost":"ghcr.io","hostType":"docker","username":"${{ steps.load-secrets.outputs.GHCR_USERNAME }}","password":"${{ steps.load-secrets.outputs.GHCR_TOKEN }}"}]}'
           RENOVATE_AUTODISCOVER: true
           RENOVATE_AUTODISCOVER_FILTER: ${{ github.repository }}
           RENOVATE_DRY_RUN: ${{ inputs.dryRun }}
