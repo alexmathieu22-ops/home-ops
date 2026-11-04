@@ -47,6 +47,12 @@
       ignoreTests: false,
     },
     {
+      description: "Our own budget app: we cut the release ourselves, so no 3-day wait (and the private registry may not report a release date)",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["ghcr.io/alexmathieu22/budget"],
+      minimumReleaseAge: null,
+    },
+    {
       description: "Auto-merge CLI tool minor/patch bumps in .tool-versions",
       matchManagers: ["asdf"],
       matchUpdateTypes: ["minor", "patch"],
