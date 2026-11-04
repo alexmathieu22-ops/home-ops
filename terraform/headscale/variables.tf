@@ -54,7 +54,7 @@ variable "headscale_subdomain" {
 variable "headscale_version" {
   description = "Headscale release to install (arm64 .deb) -- check https://github.com/juanfont/headscale/releases"
   type        = string
-  default     = "0.29.3"
+  default     = "0.29.7"
 }
 
 variable "cloudflare_api_token" {
