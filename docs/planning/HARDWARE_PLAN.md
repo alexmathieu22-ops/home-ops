@@ -43,6 +43,46 @@
 
 ---
 
+## Storage redundancy roadmap (on hold)
+
+Today `ceph-block` is one OSD (home-ops-2's 1TB HDD) at `replicated.size: 1`: it survives
+crashes and reboots, but a dead disk loses everything on it, and the data can't be read
+without a working Ceph cluster (BlueStore, plus mon metadata on the nodes' OS disks). Target:
+one Ceph disk per node on 3 nodes. Replication keeps apps up through a disk/node loss; it is
+**not** a backup — deletes and corruption replicate too — so off-cluster backups are a
+separate track below. Parked until there's a real need (e.g. Immich holding data that exists
+nowhere else).
+
+**Phase 1 — replication on the current 2 nodes**
+1. Second disk in home-ops-1 (~1TB, to match the HDD): the empty M.2 slot, or the 2.5" bay.
+2. Wired Ethernet for home-ops-2 — replication sends every write to both nodes; WiFi won't
+   hold up.
+3. `replicated.size: 2`, unmute `TOO_FEW_OSDS`/`POOL_NO_REDUNDANCY` (see
+   `docs/adr/storage/2026-08-19-rook-ceph-muted-health-warnings.md`).
+
+Result: survives one disk dying. A node going down can still pause storage — 3 mons on 2
+nodes means one node can take quorum with it.
+
+**Phase 2 — third node**
+4. Third node, wired, with a spare Ceph disk next to its OS disk.
+5. Add it to `talos/talconfig.yaml` and promote all three to control-plane (etcd HA, per the
+   node-2 note above).
+6. Ceph: `replicated.size: 3` / `min_size: 2`, `mon.allowMultiplePerNode: false`,
+   `managePodBudgets: true` (see
+   `docs/adr/storage/2026-08-19-rook-ceph-node-drains-and-pdbs.md`).
+
+Result: any one node or disk can die with no downtime and no data loss.
+
+**Alongside**
+- **RAM:** each OSD wants ~2-4GB; both nodes are at 8GB and already near full. The 16-32GB
+  upgrade above becomes close to mandatory.
+- **Network:** all nodes wired on one switch, ideally 2.5GbE.
+- **Backups:** Kopiur (Kopia-based, what onedr0p/buroa run) snapshotting PVCs to an
+  off-cluster S3 bucket — needs a NAS or cloud bucket to exist first. Until then, anything
+  irreplaceable keeps its primary copy off the cluster.
+
+---
+
 Prices are USD street price as of mid-2026 unless noted; **Canadian pricing typically runs
 30–40% higher** on imported mini PCs due to exchange rate + import costs — budget accordingly.
 All tiers assume **3 nodes minimum** (etcd quorum for Talos HA) and an apartment
