@@ -20,6 +20,9 @@ spec:
     fullnameOverride: minecraft
     controllers:
       minecraft:
+        # On hold: scaled to 0 rather than removed, so Flux doesn't prune the PVC --
+        # local-path reclaims with Delete, which would wipe the world. Set back to 1 to resume.
+        replicas: 0
         pod:
           # home-ops-1 (8GB) already carries the control plane, Prometheus and Home Assistant.
           nodeSelector:
