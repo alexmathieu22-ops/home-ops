@@ -3,4 +3,5 @@ kind: Kustomization
 resources:
   - budget/ks.yaml
   - home-assistant/ks.yaml
+  - immich/ks.yaml
   - minecraft/ks.yaml
