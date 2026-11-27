@@ -1,0 +1,239 @@
+# Transcribed from upstream's docker-compose.yml for the pinned release
+# (https://github.com/immich-app/immich/releases -> docker-compose.yml): server, machine
+# learning, Valkey and Immich's own Postgres image (ships the VectorChord extension
+# Immich requires). Bump all Immich images together -- the Postgres/Valkey pins come
+# from the same compose file, so re-check it on every Immich upgrade.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: immich
+  namespace: default
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: immich
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    fullnameOverride: immich
+    controllers:
+      server:
+        # RWO library volume: never run two pods against it.
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              repository: ghcr.io/immich-app/immich-server
+              tag: v3.4.2@sha256:fc880c1bf665b4aab1e74c15e56ab871225989cd546536e6b77e771869af06bd
+            env:
+              TZ: America/Toronto
+              DB_HOSTNAME: immich-postgres
+              DB_USERNAME: &dbUser postgres
+              DB_DATABASE_NAME: &dbName immich
+              REDIS_HOSTNAME: immich-valkey
+              # Server's default ML URL is http://immich-machine-learning:3003, which
+              # is exactly the Service below -- no override needed.
+            envFrom:
+              - secretRef:
+                  name: immich-secret
+            probes:
+              liveness: &serverProbes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/server/ping
+                    port: &serverPort 2283
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              readiness: *serverProbes
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/server/ping
+                    port: *serverPort
+                  periodSeconds: 10
+                  failureThreshold: 30
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              # Thumbnail/transcode jobs spike well above idle.
+              limits:
+                memory: 2Gi
+      machine-learning:
+        containers:
+          app:
+            image:
+              repository: ghcr.io/immich-app/immich-machine-learning
+              tag: v3.4.2@sha256:739405742a79bd7447227c553bb62ed5491aa36acf00bc667af7f9c93b6fae91
+            env:
+              TZ: America/Toronto
+              MACHINE_LEARNING_MODEL_REVISION: v2
+            probes:
+              liveness: &mlProbes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /ping
+                    port: &mlPort 3003
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              readiness: *mlProbes
+            resources:
+              requests:
+                cpu: 50m
+                memory: 256Mi
+              # Models load on demand and unload after 5 min idle (MACHINE_LEARNING_MODEL_TTL),
+              # so this is only hit while smart search/face jobs run. Nodes have 8GB.
+              limits:
+                memory: 2560Mi
+      postgres:
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              repository: ghcr.io/immich-app/postgres
+              tag: 14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
+            env:
+              POSTGRES_USER: *dbUser
+              POSTGRES_DB: *dbName
+              POSTGRES_INITDB_ARGS: --data-checksums
+              # ceph-block's only OSD is an HDD.
+              DB_STORAGE_TYPE: HDD
+              # A fresh ext4 volume has lost+found at its root, which initdb refuses.
+              PGDATA: /var/lib/postgresql/data/pgdata
+            envFrom:
+              - secretRef:
+                  name: immich-secret
+            probes:
+              liveness: &pgProbes
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command: ["pg_isready", "-U", "postgres", "-d", "immich"]
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              readiness: *pgProbes
+            resources:
+              requests:
+                cpu: 50m
+                memory: 128Mi
+              limits:
+                memory: 1Gi
+      valkey:
+        containers:
+          app:
+            image:
+              repository: docker.io/valkey/valkey
+              tag: 9@sha256:418652cfb58ef879d4978c33553735d7147016032d5aefaa14c828e611eb9dfd
+            probes:
+              liveness: &valkeyProbes
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command: ["valkey-cli", "ping"]
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              readiness: *valkeyProbes
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                memory: 256Mi
+    service:
+      server:
+        controller: server
+        ports:
+          http:
+            port: *serverPort
+      machine-learning:
+        controller: machine-learning
+        ports:
+          http:
+            port: *mlPort
+      postgres:
+        controller: postgres
+        ports:
+          postgres:
+            port: 5432
+      valkey:
+        controller: valkey
+        ports:
+          redis:
+            port: 6379
+    # Tailnet only -- no public route, so no Cloudflare Access app needed.
+    route:
+      server:
+        hostnames:
+          - immich.internal.alexandremathieu.com
+        parentRefs:
+          - name: internal
+            namespace: networking
+            sectionName: https
+        rules:
+          - backendRefs:
+              - identifier: server
+                port: *serverPort
+            # Envoy's default 15s request timeout would cut off large video uploads.
+            timeouts:
+              request: 10m
+    # ceph-block, not local-path: it's the 1TB HDD with ~885GiB free, and an RBD volume
+    # can follow its pod to either node (local-path pins it to one node's OS SSD).
+    # It's still a single replica with no backup -- keep originals elsewhere. `retain`
+    # keeps the PVCs on helm uninstall, since the StorageClass reclaims with Delete.
+    persistence:
+      library:
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        size: 50Gi
+        storageClass: ceph-block
+        retain: true
+        advancedMounts:
+          server:
+            app:
+              - path: /data
+      postgres:
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        size: 5Gi
+        storageClass: ceph-block
+        retain: true
+        advancedMounts:
+          postgres:
+            app:
+              - path: /var/lib/postgresql/data
+      # Compose's shm_size: 128mb.
+      shm:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 128Mi
+        advancedMounts:
+          postgres:
+            app:
+              - path: /dev/shm
+      # Downloaded models -- persisted so restarts don't re-download ~1GB.
+      ml-cache:
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        size: 10Gi
+        storageClass: ceph-block
+        advancedMounts:
+          machine-learning:
+            app:
+              - path: /cache
